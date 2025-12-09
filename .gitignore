@@ -1,0 +1,58 @@
+# Facilita Cred - Git Ignore
+
+# Arquivos de instalação (remover após deploy)
+check.php
+database/install.php
+
+# Arquivos de configuração sensíveis (se houver)
+# config/database.php
+
+# Diretórios do sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+error_log
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.claude/
+
+# Node modules (se usar no futuro)
+node_modules/
+package-lock.json
+
+# Vendor (se usar Composer no futuro)
+vendor/
+composer.lock
+
+# Upload de usuários (se houver)
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Cache
+cache/
+*.cache
+
+# Backup files
+*.bak
+*.backup
+*.sql.gz
+*.zip
+
+# Environment files
+.env
+.env.local
+.env.production
