@@ -2,12 +2,38 @@
 require_once __DIR__ . '/../../core/Session.php';
 require_once __DIR__ . '/../../core/Database.php';
 require_once __DIR__ . '/loan-service.php';
+require_once __DIR__ . '/../clients/client-service.php';
+require_once __DIR__ . '/../wallets/wallet-service.php';
 
 Session::requireAuth();
 
 $loanService = new LoanService();
 $loanService->updateOverdueInstallments();
-$loans = $loanService->getAllLoans(Session::get('user_id'));
+
+// Capturar filtros
+$filters = [
+    'status' => $_GET['status'] ?? '',
+    'client_id' => $_GET['client_id'] ?? '',
+    'wallet_id' => $_GET['wallet_id'] ?? '',
+    'search' => $_GET['search'] ?? '',
+    'start_date' => $_GET['start_date'] ?? '',
+    'end_date' => $_GET['end_date'] ?? ''
+];
+
+// Capturar página atual
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$perPage = 15;
+
+// Buscar empréstimos com filtros e paginação
+$result = $loanService->getAllLoans(Session::get('user_id'), $filters, $page, $perPage);
+$loans = $result['data'];
+$pagination = $result['pagination'];
+
+// Buscar clientes e carteiras para os filtros
+$clientService = new ClientService();
+$walletService = new WalletService();
+$clients = $clientService->getAllClients(Session::get('user_id'));
+$wallets = $walletService->getAllWallets(Session::get('user_id'));
 
 $pageTitle = 'Empréstimos';
 require_once __DIR__ . '/../../shared/layout/header.php';
@@ -18,6 +44,64 @@ require_once __DIR__ . '/../../shared/layout/header.php';
     <a href="<?= BASE_URL ?>/loans/create" class="btn btn-primary">
         + Novo Empréstimo
     </a>
+</div>
+
+<!-- Filtros -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">
+        <h3 style="margin: 0; font-size: 1rem; font-weight: 600;">🔍 Filtros</h3>
+    </div>
+    <form method="GET" action="<?= BASE_URL ?>/loans" style="padding: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Buscar</label>
+                <input type="text" name="search" value="<?= htmlspecialchars($filters['search']) ?>"
+                       placeholder="Nome ou CPF do cliente" class="form-control">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Status</label>
+                <select name="status" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="active" <?= $filters['status'] === 'active' ? 'selected' : '' ?>>Ativos</option>
+                    <option value="paid" <?= $filters['status'] === 'paid' ? 'selected' : '' ?>>Pagos</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Cliente</label>
+                <select name="client_id" class="form-control">
+                    <option value="">Todos</option>
+                    <?php foreach ($clients as $client): ?>
+                        <option value="<?= $client['id'] ?>" <?= $filters['client_id'] == $client['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($client['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Carteira</label>
+                <select name="wallet_id" class="form-control">
+                    <option value="">Todas</option>
+                    <?php foreach ($wallets as $wallet): ?>
+                        <option value="<?= $wallet['id'] ?>" <?= $filters['wallet_id'] == $wallet['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($wallet['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Data Inicial</label>
+                <input type="date" name="start_date" value="<?= htmlspecialchars($filters['start_date']) ?>" class="form-control">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Data Final</label>
+                <input type="date" name="end_date" value="<?= htmlspecialchars($filters['end_date']) ?>" class="form-control">
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="<?= BASE_URL ?>/loans" class="btn btn-secondary">Limpar</a>
+        </div>
+    </form>
 </div>
 
 <?php
@@ -31,20 +115,20 @@ $ativos = count(array_filter($loans, fn($l) => $l['status'] === 'active'));
 
 <div class="stats-grid" style="margin-bottom: 2rem;">
     <div class="stat-card" style="border-left: 4px solid #6b7280;">
-        <div class="stat-value" style="color: #1C1C1C;"><?= count($loans) ?></div>
+        <div class="stat-value" style="color: #1C1C1C;"><?= $pagination['total'] ?></div>
         <div class="stat-label" style="color: #6b7280;">Total de Empréstimos</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #11C76F;">
         <div class="stat-value" style="color: #1C1C1C;"><?= $ativos ?></div>
-        <div class="stat-label" style="color: #6b7280;">Empréstimos Ativos</div>
+        <div class="stat-label" style="color: #6b7280;">Empréstimos Ativos (página)</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #EA580C;">
         <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalEmprestado, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Total Emprestado</div>
+        <div class="stat-label" style="color: #6b7280;">Total Emprestado (página)</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #0D9488;">
         <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalReceber, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">A Receber</div>
+        <div class="stat-label" style="color: #6b7280;">A Receber (página)</div>
     </div>
 </div>
 
@@ -61,7 +145,9 @@ $ativos = count(array_filter($loans, fn($l) => $l['status'] === 'active'));
     <div class="card">
         <div class="card-header">
             <h2>Lista de Empréstimos</h2>
-            <input type="text" id="searchInput" placeholder="🔍 Buscar..." style="max-width: 300px;" oninput="filterLoans()">
+            <span style="color: #6b7280; font-size: 0.875rem;">
+                Mostrando <?= count($loans) ?> de <?= $pagination['total'] ?> empréstimos
+            </span>
         </div>
 
         <div class="table-responsive">
@@ -124,21 +210,52 @@ $ativos = count(array_filter($loans, fn($l) => $l['status'] === 'active'));
                 </tbody>
             </table>
         </div>
+
+        <?php if ($pagination['total_pages'] > 1): ?>
+        <!-- Paginação -->
+        <div style="padding: 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <div style="color: #6b7280; font-size: 0.875rem;">
+                Página <?= $pagination['current_page'] ?> de <?= $pagination['total_pages'] ?>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <?php
+                // Construir URL com filtros
+                $queryParams = array_filter($filters);
+                $buildUrl = function($page) use ($queryParams) {
+                    $params = array_merge($queryParams, ['page' => $page]);
+                    return BASE_URL . '/loans?' . http_build_query($params);
+                };
+                ?>
+
+                <?php if ($pagination['current_page'] > 1): ?>
+                    <a href="<?= $buildUrl(1) ?>" class="btn btn-sm btn-outline">« Primeira</a>
+                    <a href="<?= $buildUrl($pagination['current_page'] - 1) ?>" class="btn btn-sm btn-outline">‹ Anterior</a>
+                <?php endif; ?>
+
+                <?php
+                // Mostrar páginas próximas
+                $startPage = max(1, $pagination['current_page'] - 2);
+                $endPage = min($pagination['total_pages'], $pagination['current_page'] + 2);
+
+                for ($i = $startPage; $i <= $endPage; $i++):
+                    if ($i == $pagination['current_page']):
+                ?>
+                    <span class="btn btn-sm btn-primary"><?= $i ?></span>
+                <?php else: ?>
+                    <a href="<?= $buildUrl($i) ?>" class="btn btn-sm btn-outline"><?= $i ?></a>
+                <?php
+                    endif;
+                endfor;
+                ?>
+
+                <?php if ($pagination['current_page'] < $pagination['total_pages']): ?>
+                    <a href="<?= $buildUrl($pagination['current_page'] + 1) ?>" class="btn btn-sm btn-outline">Próxima ›</a>
+                    <a href="<?= $buildUrl($pagination['total_pages']) ?>" class="btn btn-sm btn-outline">Última »</a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 <?php endif; ?>
-
-<script>
-function filterLoans() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const table = document.getElementById('loansTable');
-    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchTerm) ? '' : 'none';
-    }
-}
-</script>
 
 <?php require_once __DIR__ . '/../../shared/layout/footer.php'; ?>

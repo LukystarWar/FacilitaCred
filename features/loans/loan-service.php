@@ -7,8 +7,62 @@ class LoanService {
         $this->db = Database::getInstance()->getConnection();
     }
 
-    public function getAllLoans($userId) {
+    public function getAllLoans($userId, $filters = [], $page = 1, $perPage = 20) {
         try {
+            $offset = ($page - 1) * $perPage;
+            $where = ["1=1"];
+            $params = [];
+
+            // Filtro por status
+            if (!empty($filters['status'])) {
+                $where[] = "l.status = :status";
+                $params['status'] = $filters['status'];
+            }
+
+            // Filtro por cliente
+            if (!empty($filters['client_id'])) {
+                $where[] = "l.client_id = :client_id";
+                $params['client_id'] = $filters['client_id'];
+            }
+
+            // Filtro por carteira
+            if (!empty($filters['wallet_id'])) {
+                $where[] = "l.wallet_id = :wallet_id";
+                $params['wallet_id'] = $filters['wallet_id'];
+            }
+
+            // Filtro por busca (nome do cliente)
+            if (!empty($filters['search'])) {
+                $where[] = "(c.name LIKE :search OR c.cpf LIKE :search)";
+                $params['search'] = '%' . $filters['search'] . '%';
+            }
+
+            // Filtro por data inicial
+            if (!empty($filters['start_date'])) {
+                $where[] = "DATE(l.created_at) >= :start_date";
+                $params['start_date'] = $filters['start_date'];
+            }
+
+            // Filtro por data final
+            if (!empty($filters['end_date'])) {
+                $where[] = "DATE(l.created_at) <= :end_date";
+                $params['end_date'] = $filters['end_date'];
+            }
+
+            $whereClause = implode(" AND ", $where);
+
+            // Query para total de registros
+            $countStmt = $this->db->prepare("
+                SELECT COUNT(DISTINCT l.id) as total
+                FROM loans l
+                INNER JOIN clients c ON l.client_id = c.id
+                INNER JOIN wallets w ON l.wallet_id = w.id
+                WHERE $whereClause
+            ");
+            $countStmt->execute($params);
+            $totalRecords = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+            // Query principal com paginação
             $stmt = $this->db->prepare("
                 SELECT
                     l.*,
@@ -22,15 +76,41 @@ class LoanService {
                 INNER JOIN clients c ON l.client_id = c.id
                 INNER JOIN wallets w ON l.wallet_id = w.id
                 LEFT JOIN loan_installments i ON l.id = i.loan_id
-                WHERE 1=1
+                WHERE $whereClause
                 GROUP BY l.id
                 ORDER BY l.created_at DESC
+                LIMIT :limit OFFSET :offset
             ");
+
+            foreach ($params as $key => $value) {
+                $stmt->bindValue(":$key", $value);
+            }
+            $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+
             $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return [
+                'data' => $loans,
+                'pagination' => [
+                    'total' => $totalRecords,
+                    'per_page' => $perPage,
+                    'current_page' => $page,
+                    'total_pages' => ceil($totalRecords / $perPage)
+                ]
+            ];
         } catch (PDOException $e) {
             error_log("Erro ao buscar empréstimos: " . $e->getMessage());
-            return [];
+            return [
+                'data' => [],
+                'pagination' => [
+                    'total' => 0,
+                    'per_page' => $perPage,
+                    'current_page' => 1,
+                    'total_pages' => 0
+                ]
+            ];
         }
     }
 
