@@ -461,30 +461,36 @@ textarea.form-control {
 
 .badge-success,
 .status-success {
-    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-    color: #065f46;
-    border: 1px solid #6ee7b7;
+    background: #28a745;
+    color: white;
+    border: none;
 }
 
 .badge-warning,
 .status-warning {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    color: #92400e;
-    border: 1px solid #fcd34d;
+    background: #ffc107;
+    color: #212529;
+    border: none;
 }
 
 .badge-danger,
 .status-danger {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    color: #991b1b;
-    border: 1px solid #fca5a5;
+    background: #dc3545;
+    color: white;
+    border: none;
 }
 
 .badge-info,
 .status-info {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    color: #1e40af;
-    border: 1px solid #93c5fd;
+    background: #17a2b8;
+    color: white;
+    border: none;
+}
+
+.badge-primary {
+    background: #007bff;
+    color: white;
+    border: none;
 }
 
 /* ============================================

@@ -39,9 +39,9 @@ require_once __DIR__ . '/../../shared/layout/header.php';
         <?php endif; ?>
     </div>
     <div style="display: flex; gap: 0.75rem;">
-        <button class="btn btn-secondary" onclick="openEditModal()">
+        <a href="<?= BASE_URL ?>/clients/edit?id=<?= $client['id'] ?>" class="btn btn-secondary">
             ✏️ Editar
-        </button>
+        </a>
         <a href="<?= BASE_URL ?>/loans/create?client_id=<?= $client['id'] ?>" class="btn btn-primary">
             + Novo Empréstimo
         </a>
@@ -211,44 +211,6 @@ require_once __DIR__ . '/../../shared/layout/header.php';
     <?php endif; ?>
 </div>
 
-<!-- Modal: Editar Cliente -->
-<div id="editModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Editar Cliente</h2>
-            <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
-        </div>
-        <form method="POST" action="<?= BASE_URL ?>/clients/update">
-            <input type="hidden" name="id" value="<?= $client['id'] ?>">
-
-            <div class="form-group">
-                <label for="name">Nome Completo *</label>
-                <input type="text" id="name" name="name" value="<?= htmlspecialchars($client['name']) ?>" required>
-            </div>
-
-            <div class="form-group">
-                <label for="cpf">CPF</label>
-                <input type="text" id="cpf" name="cpf" value="<?= htmlspecialchars($client['cpf']) ?>" maxlength="14" oninput="maskCPF(this)">
-            </div>
-
-            <div class="form-group">
-                <label for="phone">Telefone</label>
-                <input type="text" id="phone" name="phone" value="<?= htmlspecialchars($client['phone']) ?>" maxlength="15" oninput="maskPhone(this)">
-            </div>
-
-            <div class="form-group">
-                <label for="address">Endereço</label>
-                <textarea id="address" name="address" rows="3"><?= htmlspecialchars($client['address']) ?></textarea>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <style>
 .btn-back {
     display: inline-block;
@@ -274,51 +236,5 @@ require_once __DIR__ . '/../../shared/layout/header.php';
     margin-bottom: 2rem;
 }
 </style>
-
-<script>
-function openEditModal() {
-    document.getElementById('editModal').style.display = 'flex';
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-function maskCPF(input) {
-    let value = input.value.replace(/\D/g, '');
-    if (value.length > 11) value = value.substr(0, 11);
-
-    if (value.length > 9) {
-        value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-    } else if (value.length > 6) {
-        value = value.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
-    } else if (value.length > 3) {
-        value = value.replace(/(\d{3})(\d{1,3})/, '$1.$2');
-    }
-
-    input.value = value;
-}
-
-function maskPhone(input) {
-    let value = input.value.replace(/\D/g, '');
-    if (value.length > 11) value = value.substr(0, 11);
-
-    if (value.length > 10) {
-        value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    } else if (value.length > 6) {
-        value = value.replace(/(\d{2})(\d{4})(\d{1,4})/, '($1) $2-$3');
-    } else if (value.length > 2) {
-        value = value.replace(/(\d{2})(\d{1,5})/, '($1) $2');
-    }
-
-    input.value = value;
-}
-
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = 'none';
-    }
-}
-</script>
 
 <?php require_once __DIR__ . '/../../shared/layout/footer.php'; ?>
