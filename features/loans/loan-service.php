@@ -453,4 +453,75 @@ class LoanService {
             return ['success' => false, 'error' => 'Erro ao processar quitação'];
         }
     }
+
+    public function calculateLateFee($installmentAmount, $dueDate) {
+        require_once __DIR__ . '/../settings/settings-service.php';
+        $settingsService = new SettingsService();
+
+        // Buscar configurações
+        $gracePeriodDays = $settingsService->getSetting('grace_period_days', 3);
+        $lateFeePercentage = $settingsService->getSetting('late_fee_percentage', 2);
+
+        // Calcular dias de atraso
+        $dueDateObj = new DateTime($dueDate);
+        $today = new DateTime();
+        $diff = $today->diff($dueDateObj);
+        $daysLate = $today > $dueDateObj ? $diff->days : 0;
+
+        // Se ainda está no período de carência, não há multa
+        if ($daysLate <= $gracePeriodDays) {
+            return [
+                'days_late' => $daysLate,
+                'days_after_grace' => 0,
+                'late_fee_percentage' => 0,
+                'late_fee_amount' => 0,
+                'total_amount' => $installmentAmount,
+                'in_grace_period' => true
+            ];
+        }
+
+        // Calcular dias após a carência
+        $daysAfterGrace = $daysLate - $gracePeriodDays;
+
+        // Calcular multa (percentual por dia)
+        $lateFeeAmount = $installmentAmount * ($lateFeePercentage / 100) * $daysAfterGrace;
+        $totalAmount = $installmentAmount + $lateFeeAmount;
+
+        return [
+            'days_late' => $daysLate,
+            'days_after_grace' => $daysAfterGrace,
+            'late_fee_percentage' => $lateFeePercentage,
+            'late_fee_amount' => $lateFeeAmount,
+            'total_amount' => $totalAmount,
+            'in_grace_period' => false,
+            'grace_period_days' => $gracePeriodDays
+        ];
+    }
+
+    public function getInstallmentWithLateFee($installmentId, $userId) {
+        $stmt = $this->db->prepare("
+            SELECT i.*, l.wallet_id, l.client_id
+            FROM loan_installments i
+            INNER JOIN loans l ON i.loan_id = l.id
+            WHERE i.id = :id
+        ");
+        $stmt->execute(['id' => $installmentId]);
+        $installment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$installment) {
+            return null;
+        }
+
+        // Se a parcela está atrasada, calcular multa
+        if ($installment['status'] === 'overdue') {
+            $lateFeeInfo = $this->calculateLateFee($installment['amount'], $installment['due_date']);
+            $installment['late_fee_info'] = $lateFeeInfo;
+            $installment['amount_with_late_fee'] = $lateFeeInfo['total_amount'];
+        } else {
+            $installment['late_fee_info'] = null;
+            $installment['amount_with_late_fee'] = $installment['amount'];
+        }
+
+        return $installment;
+    }
 }

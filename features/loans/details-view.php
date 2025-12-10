@@ -158,15 +158,35 @@ $overdueCount = count(array_filter($installments, fn($i) => $i['status'] === 'ov
                             $dueDate = new DateTime($installment['due_date']);
                             $today = new DateTime();
                             $diff = $today->diff($dueDate);
-                            if ($installment['status'] === 'pending' && $dueDate < $today):
+
+                            if (in_array($installment['status'], ['pending', 'overdue']) && $dueDate < $today):
                                 $daysLate = $diff->days;
                             ?>
-                                <br><small style="color: #e74c3c;"><?= $daysLate ?> dia<?= $daysLate > 1 ? 's' : '' ?> de atraso</small>
+                                <br><small style="color: #e74c3c; font-weight: 600;"><?= $daysLate ?> dia<?= $daysLate > 1 ? 's' : '' ?> de atraso</small>
                             <?php elseif ($installment['status'] === 'pending' && $dueDate > $today): ?>
                                 <br><small class="text-muted">Faltam <?= $diff->days ?> dia<?= $diff->days > 1 ? 's' : '' ?></small>
                             <?php endif; ?>
                         </td>
-                        <td><strong>R$ <?= number_format($installment['amount'], 2, ',', '.') ?></strong></td>
+                        <td>
+                            <strong>R$ <?= number_format($installment['amount'], 2, ',', '.') ?></strong>
+                            <?php
+                            // Calcular multa se estiver atrasada
+                            if ($installment['status'] === 'overdue'):
+                                $lateFeeInfo = $loanService->calculateLateFee($installment['amount'], $installment['due_date']);
+                                if (!$lateFeeInfo['in_grace_period'] && $lateFeeInfo['late_fee_amount'] > 0):
+                            ?>
+                                <br><small style="color: #dc2626; font-weight: 600;">
+                                    + R$ <?= number_format($lateFeeInfo['late_fee_amount'], 2, ',', '.') ?> (multa)
+                                </small>
+                                <br><small style="color: #059669; font-weight: 600;">
+                                    = R$ <?= number_format($lateFeeInfo['total_amount'], 2, ',', '.') ?>
+                                </small>
+                            <?php elseif ($lateFeeInfo['in_grace_period']): ?>
+                                <br><small style="color: #f59e0b;">
+                                    Carência: <?= $lateFeeInfo['grace_period_days'] - $lateFeeInfo['days_late'] ?> dia(s)
+                                </small>
+                            <?php endif; endif; ?>
+                        </td>
                         <td>
                             <?php if ($installment['status'] === 'paid'): ?>
                                 <span class="badge badge-success">Paga</span>
