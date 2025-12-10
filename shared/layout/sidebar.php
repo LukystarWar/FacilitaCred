@@ -56,6 +56,11 @@ function isActive($path) {
             <span>Relatórios</span>
         </a>
 
+        <a href="<?= Router::url('/settings') ?>" class="sidebar-nav-item <?= isActive('/settings') ?>">
+            <img src="<?= ASSETS_URL ?>/images/configuracoes.png" alt="Configurações" class="sidebar-icon">
+            <span>Configurações</span>
+        </a>
+
         <div style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
             <a href="<?= Router::url('/logout') ?>" class="sidebar-nav-item" style="color: #f87171;">
                 <img src="<?= ASSETS_URL ?>/images/logout.png" alt="Sair" class="sidebar-icon">

@@ -113,6 +113,23 @@ CREATE TABLE IF NOT EXISTS loan_installments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- Tabela de Configurações do Sistema
+-- ============================================
+CREATE TABLE IF NOT EXISTS system_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    setting_key VARCHAR(100) UNIQUE NOT NULL COMMENT 'Chave única da configuração',
+    setting_value TEXT NOT NULL COMMENT 'Valor da configuração',
+    setting_type ENUM('text', 'number', 'boolean', 'json') DEFAULT 'text',
+    description VARCHAR(255) NULL COMMENT 'Descrição da configuração',
+    category VARCHAR(50) DEFAULT 'general' COMMENT 'Categoria (interest, penalty, grace_period, loan_rules, etc)',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_by INT NULL COMMENT 'ID do usuário que atualizou',
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_category (category),
+    INDEX idx_setting_key (setting_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- Inserir dados iniciais
 -- ============================================
 
@@ -124,6 +141,18 @@ INSERT INTO users (username, password_hash) VALUES
 -- Carteira padrão
 INSERT INTO wallets (name, balance) VALUES
 ('Carteira Principal', 0.00);
+
+-- Configurações iniciais do sistema
+INSERT INTO system_settings (setting_key, setting_value, setting_type, description, category) VALUES
+('interest_rate_single_payment', '20', 'number', 'Taxa de juros para pagamento à vista (%)', 'interest'),
+('interest_rate_installment', '15', 'number', 'Taxa de juros ao mês para parcelamentos (%)', 'interest'),
+('grace_period_days', '3', 'number', 'Dias de carência após vencimento', 'grace_period'),
+('late_fee_percentage', '2', 'number', 'Juros por dia de atraso após carência (%)', 'penalty'),
+('late_fee_type', 'daily', 'text', 'Tipo de cálculo de multa (daily, monthly, fixed)', 'penalty'),
+('system_name', 'FacilitaCred', 'text', 'Nome do sistema', 'general'),
+('min_loan_amount', '100', 'number', 'Valor mínimo de empréstimo (R$)', 'loan_rules'),
+('max_loan_amount', '100000', 'number', 'Valor máximo de empréstimo (R$)', 'loan_rules'),
+('max_installments', '24', 'number', 'Número máximo de parcelas', 'loan_rules');
 
 -- ============================================
 -- Views úteis para relatórios

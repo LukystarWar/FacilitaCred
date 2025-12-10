@@ -203,6 +203,27 @@ $router->get('/reports/profit', function() {
     require FEATURES_PATH . '/reports/profit-view.php';
 });
 
+// Configurações
+$router->get('/settings', function() {
+    requireAuth();
+    require FEATURES_PATH . '/settings/index.php';
+});
+
+$router->post('/settings/update-interest', function() {
+    requireAuth();
+    require FEATURES_PATH . '/settings/update-interest-action.php';
+});
+
+$router->post('/settings/update-penalty', function() {
+    requireAuth();
+    require FEATURES_PATH . '/settings/update-penalty-action.php';
+});
+
+$router->post('/settings/update-loan-rules', function() {
+    requireAuth();
+    require FEATURES_PATH . '/settings/update-loan-rules-action.php';
+});
+
 // ============================================
 // ROTA NÃO ENCONTRADA
 // ============================================
