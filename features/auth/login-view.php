@@ -15,7 +15,7 @@ require_once SHARED_PATH . '/layout/header.php';
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #11C76F 0%, #0E9F59 100%);
         padding: var(--spacing-lg);
     }
 

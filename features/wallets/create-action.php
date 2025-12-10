@@ -16,7 +16,6 @@ $userId = Session::get('user_id');
 // Validar campos obrigatórios
 $name = trim($_POST['name'] ?? '');
 $initialBalance = floatval($_POST['initial_balance'] ?? 0);
-$description = trim($_POST['description'] ?? '');
 
 if (empty($name)) {
     Session::setFlash('error', 'O nome da carteira é obrigatório');
@@ -31,7 +30,7 @@ if ($initialBalance < 0) {
 }
 
 // Criar a carteira
-$result = $walletService->createWallet($userId, $name, $initialBalance, $description);
+$result = $walletService->createWallet($userId, $name, $initialBalance);
 
 if ($result['success']) {
     Session::setFlash('success', 'Carteira criada com sucesso!');

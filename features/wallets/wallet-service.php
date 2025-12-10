@@ -15,12 +15,12 @@ class WalletService {
             $stmt = $this->db->prepare("
                 SELECT
                     w.*,
-                    (SELECT COUNT(*) FROM transactions WHERE wallet_id = w.id) as transaction_count
+                    (SELECT COUNT(*) FROM wallet_transactions WHERE wallet_id = w.id) as transaction_count
                 FROM wallets w
-                WHERE w.user_id = :user_id
+                WHERE w.is_active = 1
                 ORDER BY w.created_at DESC
             ");
-            $stmt->execute(['user_id' => $userId]);
+            $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Erro ao buscar carteiras: " . $e->getMessage());
@@ -35,9 +35,9 @@ class WalletService {
         try {
             $stmt = $this->db->prepare("
                 SELECT * FROM wallets
-                WHERE id = :id AND user_id = :user_id
+                WHERE id = :id
             ");
-            $stmt->execute(['id' => $id, 'user_id' => $userId]);
+            $stmt->execute(['id' => $id]);
             return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Erro ao buscar carteira: " . $e->getMessage());
@@ -48,20 +48,18 @@ class WalletService {
     /**
      * Cria uma nova carteira
      */
-    public function createWallet($userId, $name, $initialBalance = 0, $description = '') {
+    public function createWallet($userId, $name, $initialBalance = 0) {
         try {
             $this->db->beginTransaction();
 
             // Inserir a carteira
             $stmt = $this->db->prepare("
-                INSERT INTO wallets (user_id, name, balance, description, created_at)
-                VALUES (:user_id, :name, :balance, :description, NOW())
+                INSERT INTO wallets (name, balance, created_at)
+                VALUES (:name, :balance, NOW())
             ");
             $stmt->execute([
-                'user_id' => $userId,
                 'name' => $name,
-                'balance' => $initialBalance,
-                'description' => $description
+                'balance' => $initialBalance
             ]);
 
             $walletId = $this->db->lastInsertId();
@@ -70,7 +68,7 @@ class WalletService {
             if ($initialBalance > 0) {
                 $this->recordTransaction(
                     $walletId,
-                    'credit',
+                    'deposit',
                     $initialBalance,
                     'Saldo inicial'
                 );
@@ -88,18 +86,16 @@ class WalletService {
     /**
      * Atualiza uma carteira existente
      */
-    public function updateWallet($id, $userId, $name, $description = '') {
+    public function updateWallet($id, $userId, $name) {
         try {
             $stmt = $this->db->prepare("
                 UPDATE wallets
-                SET name = :name, description = :description, updated_at = NOW()
-                WHERE id = :id AND user_id = :user_id
+                SET name = :name, updated_at = NOW()
+                WHERE id = :id
             ");
             $result = $stmt->execute([
                 'id' => $id,
-                'user_id' => $userId,
-                'name' => $name,
-                'description' => $description
+                'name' => $name
             ]);
 
             return ['success' => $result];
@@ -116,7 +112,7 @@ class WalletService {
         try {
             // Verificar se há transações
             $stmt = $this->db->prepare("
-                SELECT COUNT(*) as count FROM transactions
+                SELECT COUNT(*) as count FROM wallet_transactions
                 WHERE wallet_id = :wallet_id
             ");
             $stmt->execute(['wallet_id' => $id]);
@@ -129,9 +125,9 @@ class WalletService {
             // Excluir a carteira
             $stmt = $this->db->prepare("
                 DELETE FROM wallets
-                WHERE id = :id AND user_id = :user_id
+                WHERE id = :id
             ");
-            $result = $stmt->execute(['id' => $id, 'user_id' => $userId]);
+            $result = $stmt->execute(['id' => $id]);
 
             return ['success' => $result];
         } catch (PDOException $e) {
@@ -151,18 +147,17 @@ class WalletService {
             $stmt = $this->db->prepare("
                 UPDATE wallets
                 SET balance = balance + :amount, updated_at = NOW()
-                WHERE id = :id AND user_id = :user_id
+                WHERE id = :id
             ");
             $stmt->execute([
                 'id' => $walletId,
-                'user_id' => $userId,
                 'amount' => $amount
             ]);
 
             // Registrar transação
             $this->recordTransaction(
                 $walletId,
-                'credit',
+                'deposit',
                 $amount,
                 $description ?: 'Adição de saldo'
             );
@@ -193,18 +188,17 @@ class WalletService {
             $stmt = $this->db->prepare("
                 UPDATE wallets
                 SET balance = balance - :amount, updated_at = NOW()
-                WHERE id = :id AND user_id = :user_id
+                WHERE id = :id
             ");
             $stmt->execute([
                 'id' => $walletId,
-                'user_id' => $userId,
                 'amount' => $amount
             ]);
 
             // Registrar transação
             $this->recordTransaction(
                 $walletId,
-                'debit',
+                'withdrawal',
                 $amount,
                 $description ?: 'Retirada de saldo'
             );
@@ -230,7 +224,7 @@ class WalletService {
             }
 
             $stmt = $this->db->prepare("
-                SELECT * FROM transactions
+                SELECT * FROM wallet_transactions
                 WHERE wallet_id = :wallet_id
                 ORDER BY created_at DESC
                 LIMIT :limit
@@ -250,7 +244,7 @@ class WalletService {
      */
     private function recordTransaction($walletId, $type, $amount, $description) {
         $stmt = $this->db->prepare("
-            INSERT INTO transactions (wallet_id, type, amount, description, created_at)
+            INSERT INTO wallet_transactions (wallet_id, type, amount, description, created_at)
             VALUES (:wallet_id, :type, :amount, :description, NOW())
         ");
         $stmt->execute([
@@ -269,9 +263,9 @@ class WalletService {
             $stmt = $this->db->prepare("
                 SELECT COALESCE(SUM(balance), 0) as total
                 FROM wallets
-                WHERE user_id = :user_id
+                WHERE is_active = 1
             ");
-            $stmt->execute(['user_id' => $userId]);
+            $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             return $result['total'];
         } catch (PDOException $e) {

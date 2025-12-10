@@ -16,7 +16,6 @@ $userId = Session::get('user_id');
 // Validar campos obrigatórios
 $id = intval($_POST['id'] ?? 0);
 $name = trim($_POST['name'] ?? '');
-$description = trim($_POST['description'] ?? '');
 
 if ($id <= 0) {
     Session::setFlash('error', 'Carteira inválida');
@@ -39,7 +38,7 @@ if (!$wallet) {
 }
 
 // Atualizar a carteira
-$result = $walletService->updateWallet($id, $userId, $name, $description);
+$result = $walletService->updateWallet($id, $userId, $name);
 
 if ($result['success']) {
     Session::setFlash('success', 'Carteira atualizada com sucesso!');

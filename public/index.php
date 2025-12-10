@@ -77,9 +77,19 @@ $router->get('/wallets', function() {
     require FEATURES_PATH . '/wallets/list-view.php';
 });
 
+$router->get('/wallets/create', function() {
+    requireAuth();
+    require FEATURES_PATH . '/wallets/create-view.php';
+});
+
 $router->post('/wallets/create', function() {
     requireAuth();
     require FEATURES_PATH . '/wallets/create-action.php';
+});
+
+$router->get('/wallets/edit', function() {
+    requireAuth();
+    require FEATURES_PATH . '/wallets/edit-view.php';
 });
 
 $router->post('/wallets/update', function() {
@@ -92,9 +102,24 @@ $router->get('/wallets/delete', function() {
     require FEATURES_PATH . '/wallets/delete-action.php';
 });
 
+$router->get('/wallets/transaction', function() {
+    requireAuth();
+    require FEATURES_PATH . '/wallets/transaction-view.php';
+});
+
 $router->post('/wallets/transaction', function() {
     requireAuth();
     require FEATURES_PATH . '/wallets/transaction-action.php';
+});
+
+$router->get('/wallets/transfer', function() {
+    requireAuth();
+    require FEATURES_PATH . '/wallets/transfer-view.php';
+});
+
+$router->post('/wallets/transfer', function() {
+    requireAuth();
+    require FEATURES_PATH . '/wallets/transfer-action.php';
 });
 
 $router->get('/wallets/:id', function($id) {
@@ -109,9 +134,19 @@ $router->get('/clients', function() {
     require FEATURES_PATH . '/clients/list-view.php';
 });
 
+$router->get('/clients/create', function() {
+    requireAuth();
+    require FEATURES_PATH . '/clients/create-view.php';
+});
+
 $router->post('/clients/create', function() {
     requireAuth();
     require FEATURES_PATH . '/clients/create-action.php';
+});
+
+$router->get('/clients/edit', function() {
+    requireAuth();
+    require FEATURES_PATH . '/clients/edit-view.php';
 });
 
 $router->post('/clients/update', function() {

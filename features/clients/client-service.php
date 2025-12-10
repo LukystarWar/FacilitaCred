@@ -16,11 +16,11 @@ class ClientService {
                     COALESCE(SUM(CASE WHEN l.status = 'active' THEN l.total_amount ELSE 0 END), 0) as active_debt
                 FROM clients c
                 LEFT JOIN loans l ON c.id = l.client_id
-                WHERE c.user_id = :user_id
+                WHERE c.is_active = 1
                 GROUP BY c.id
                 ORDER BY c.created_at DESC
             ");
-            $stmt->execute(['user_id' => $userId]);
+            $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Erro ao buscar clientes: " . $e->getMessage());
@@ -32,9 +32,9 @@ class ClientService {
         try {
             $stmt = $this->db->prepare("
                 SELECT * FROM clients
-                WHERE id = :id AND user_id = :user_id
+                WHERE id = :id
             ");
-            $stmt->execute(['id' => $id, 'user_id' => $userId]);
+            $stmt->execute(['id' => $id]);
             return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Erro ao buscar cliente: " . $e->getMessage());
@@ -51,19 +51,18 @@ class ClientService {
 
             // Verificar CPF duplicado
             if ($cpf) {
-                $stmt = $this->db->prepare("SELECT id FROM clients WHERE cpf = :cpf AND user_id = :user_id");
-                $stmt->execute(['cpf' => $cpf, 'user_id' => $userId]);
+                $stmt = $this->db->prepare("SELECT id FROM clients WHERE cpf = :cpf");
+                $stmt->execute(['cpf' => $cpf]);
                 if ($stmt->fetch()) {
                     return ['success' => false, 'error' => 'CPF já cadastrado'];
                 }
             }
 
             $stmt = $this->db->prepare("
-                INSERT INTO clients (user_id, name, cpf, phone, address, created_at)
-                VALUES (:user_id, :name, :cpf, :phone, :address, NOW())
+                INSERT INTO clients (name, cpf, phone, address, created_at)
+                VALUES (:name, :cpf, :phone, :address, NOW())
             ");
             $stmt->execute([
-                'user_id' => $userId,
                 'name' => $name,
                 'cpf' => $cpf,
                 'phone' => $phone,
@@ -88,9 +87,9 @@ class ClientService {
             if ($cpf) {
                 $stmt = $this->db->prepare("
                     SELECT id FROM clients
-                    WHERE cpf = :cpf AND user_id = :user_id AND id != :id
+                    WHERE cpf = :cpf AND id != :id
                 ");
-                $stmt->execute(['cpf' => $cpf, 'user_id' => $userId, 'id' => $id]);
+                $stmt->execute(['cpf' => $cpf, 'id' => $id]);
                 if ($stmt->fetch()) {
                     return ['success' => false, 'error' => 'CPF já cadastrado para outro cliente'];
                 }
@@ -99,11 +98,10 @@ class ClientService {
             $stmt = $this->db->prepare("
                 UPDATE clients
                 SET name = :name, cpf = :cpf, phone = :phone, address = :address, updated_at = NOW()
-                WHERE id = :id AND user_id = :user_id
+                WHERE id = :id
             ");
             $result = $stmt->execute([
                 'id' => $id,
-                'user_id' => $userId,
                 'name' => $name,
                 'cpf' => $cpf,
                 'phone' => $phone,
@@ -133,9 +131,9 @@ class ClientService {
 
             $stmt = $this->db->prepare("
                 DELETE FROM clients
-                WHERE id = :id AND user_id = :user_id
+                WHERE id = :id
             ");
-            $result = $stmt->execute(['id' => $id, 'user_id' => $userId]);
+            $result = $stmt->execute(['id' => $id]);
 
             return ['success' => $result];
         } catch (PDOException $e) {
@@ -146,7 +144,7 @@ class ClientService {
 
     public function getClientLoans($clientId, $userId) {
         try {
-            // Verificar se o cliente pertence ao usuário
+            // Verificar se o cliente existe
             $client = $this->getClientById($clientId, $userId);
             if (!$client) {
                 return [];
@@ -161,7 +159,7 @@ class ClientService {
                     COUNT(CASE WHEN i.status = 'overdue' THEN 1 END) as overdue_installments
                 FROM loans l
                 INNER JOIN wallets w ON l.wallet_id = w.id
-                LEFT JOIN installments i ON l.id = i.loan_id
+                LEFT JOIN loan_installments i ON l.id = i.loan_id
                 WHERE l.client_id = :client_id
                 GROUP BY l.id
                 ORDER BY l.created_at DESC
@@ -182,16 +180,13 @@ class ClientService {
                     COUNT(DISTINCT l.id) as loan_count
                 FROM clients c
                 LEFT JOIN loans l ON c.id = l.client_id
-                WHERE c.user_id = :user_id
+                WHERE c.is_active = 1
                   AND (c.name LIKE :query OR c.cpf LIKE :query OR c.phone LIKE :query)
                 GROUP BY c.id
                 ORDER BY c.name ASC
                 LIMIT 50
             ");
-            $stmt->execute([
-                'user_id' => $userId,
-                'query' => '%' . $query . '%'
-            ]);
+            $stmt->execute(['query' => '%' . $query . '%']);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Erro ao buscar clientes: " . $e->getMessage());

@@ -9,8 +9,10 @@
     <!-- CSS -->
     <link rel="stylesheet" href="<?= ASSETS_URL ?>/css/main.css">
 
-    <!-- Favicon (opcional) -->
-    <link rel="icon" type="image/x-icon" href="<?= ASSETS_URL ?>/images/favicon.ico">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="<?= ASSETS_URL ?>/images/logo.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?= ASSETS_URL ?>/images/logo.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?= ASSETS_URL ?>/images/logo.png">
 </head>
 <body>
     <?php if (Session::isAuthenticated()): ?>

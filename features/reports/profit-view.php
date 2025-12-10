@@ -108,19 +108,19 @@ require_once __DIR__ . '/../../shared/layout/header.php';
         <div class="stat-label">Total Emprestado</div>
     </div>
 
-    <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
-        <div class="stat-value">R$ <?= number_format($totalJuros, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Lucro Total (Juros)</div>
+    <div class="stat-card" style="border-left: 4px solid #65A30D;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalJuros, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Lucro Total (Juros)</div>
     </div>
 
-    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-        <div class="stat-value">R$ <?= number_format($jurosRecebidos, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Lucro Recebido</div>
+    <div class="stat-card" style="border-left: 4px solid #11C76F;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($jurosRecebidos, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Lucro Recebido</div>
     </div>
 
-    <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
-        <div class="stat-value">R$ <?= number_format($jurosPendentes, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Lucro Pendente</div>
+    <div class="stat-card" style="border-left: 4px solid #EA580C;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($jurosPendentes, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Lucro Pendente</div>
     </div>
 </div>
 
@@ -180,7 +180,7 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 
                 <div>
                     <div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Taxa Média de Juros</div>
-                    <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #11C76F;">
                         <?= number_format($avgInterest, 2, ',', '.') ?>%
                     </div>
                 </div>

@@ -28,31 +28,29 @@ $lucroTotal = array_sum(array_column($loans, 'interest_amount'));
 $db = Database::getInstance()->getConnection();
 $stmt = $db->prepare("
     SELECT i.*, l.client_id, c.name as client_name, l.id as loan_id
-    FROM installments i
+    FROM loan_installments i
     INNER JOIN loans l ON i.loan_id = l.id
     INNER JOIN clients c ON l.client_id = c.id
-    WHERE l.user_id = :user_id
-      AND i.status = 'pending'
+    WHERE i.status = 'pending'
       AND i.due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
     ORDER BY i.due_date ASC
     LIMIT 5
 ");
-$stmt->execute(['user_id' => $userId]);
+$stmt->execute();
 $upcomingInstallments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Parcelas atrasadas
 $stmt = $db->prepare("
     SELECT i.*, l.client_id, c.name as client_name, l.id as loan_id
-    FROM installments i
+    FROM loan_installments i
     INNER JOIN loans l ON i.loan_id = l.id
     INNER JOIN clients c ON l.client_id = c.id
-    WHERE l.user_id = :user_id
-      AND i.status IN ('pending', 'overdue')
+    WHERE i.status IN ('pending', 'overdue')
       AND i.due_date < CURDATE()
     ORDER BY i.due_date ASC
     LIMIT 5
 ");
-$stmt->execute(['user_id' => $userId]);
+$stmt->execute();
 $overdueInstallments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle = 'Dashboard';
@@ -68,24 +66,24 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 </div>
 
 <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-        <div class="stat-value">R$ <?= number_format($totalCarteiras, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Total em Carteiras</div>
+    <div class="stat-card" style="border-left: 4px solid #11C76F;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalCarteiras, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total em Carteiras</div>
     </div>
 
-    <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
-        <div class="stat-value">R$ <?= number_format($totalEmprestado, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Total Emprestado</div>
+    <div class="stat-card" style="border-left: 4px solid #EA580C;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalEmprestado, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total Emprestado</div>
     </div>
 
-    <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
-        <div class="stat-value">R$ <?= number_format($totalReceber, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Total a Receber</div>
+    <div class="stat-card" style="border-left: 4px solid #0D9488;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalReceber, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total a Receber</div>
     </div>
 
-    <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
-        <div class="stat-value">R$ <?= number_format($lucroTotal, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Lucro Total (Juros)</div>
+    <div class="stat-card" style="border-left: 4px solid #65A30D;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($lucroTotal, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Lucro Total (Juros)</div>
     </div>
 </div>
 

@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS loan_installments (
 -- Usuário padrão: admin / admin123
 -- Senha gerada com: password_hash('admin123', PASSWORD_DEFAULT)
 INSERT INTO users (username, password_hash) VALUES
-('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
+('admin', '$2y$10$p7Ebn2/kLmHIhHW1pygBtugmC.8hcqQbuzb41Z5.P.04t/QFtLswi');
 
 -- Carteira padrão
 INSERT INTO wallets (name, balance) VALUES

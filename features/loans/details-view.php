@@ -53,21 +53,21 @@ $overdueCount = count(array_filter($installments, fn($i) => $i['status'] === 'ov
 ?>
 
 <div class="stats-grid" style="margin-bottom: 2rem;">
-    <div class="stat-card">
-        <div class="stat-value">R$ <?= number_format($loan['amount'], 2, ',', '.') ?></div>
-        <div class="stat-label">Valor Emprestado</div>
+    <div class="stat-card" style="border-left: 4px solid #EA580C;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($loan['amount'], 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Valor Emprestado</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-value">R$ <?= number_format($loan['total_amount'], 2, ',', '.') ?></div>
-        <div class="stat-label">Total + Juros (<?= $loan['interest_rate'] ?>%)</div>
+    <div class="stat-card" style="border-left: 4px solid #65A30D;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($loan['total_amount'], 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total + Juros (<?= $loan['interest_rate'] ?>%)</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-value" style="color: #10b981;">R$ <?= number_format($paidAmount, 2, ',', '.') ?></div>
-        <div class="stat-label">Já Recebido</div>
+    <div class="stat-card" style="border-left: 4px solid #11C76F;">
+        <div class="stat-value" style="color: #11C76F;">R$ <?= number_format($paidAmount, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Já Recebido</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-value" style="color: #ef4444;">R$ <?= number_format($pendingAmount, 2, ',', '.') ?></div>
-        <div class="stat-label">A Receber</div>
+    <div class="stat-card" style="border-left: 4px solid #DC2626;">
+        <div class="stat-value" style="color: #DC2626;">R$ <?= number_format($pendingAmount, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">A Receber</div>
     </div>
 </div>
 
@@ -203,7 +203,7 @@ $overdueCount = count(array_filter($installments, fn($i) => $i['status'] === 'ov
 <style>
 .btn-back {
     display: inline-block;
-    color: #667eea;
+    color: #11C76F;
     text-decoration: none;
     margin-bottom: 0.5rem;
     font-weight: 500;

@@ -129,7 +129,7 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 <style>
 .btn-back {
     display: inline-block;
-    color: #667eea;
+    color: #11C76F;
     text-decoration: none;
     margin-bottom: 0.5rem;
     font-weight: 500;

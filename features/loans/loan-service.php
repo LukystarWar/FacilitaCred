@@ -21,12 +21,12 @@ class LoanService {
                 FROM loans l
                 INNER JOIN clients c ON l.client_id = c.id
                 INNER JOIN wallets w ON l.wallet_id = w.id
-                LEFT JOIN installments i ON l.id = i.loan_id
-                WHERE l.user_id = :user_id
+                LEFT JOIN loan_installments i ON l.id = i.loan_id
+                WHERE 1=1
                 GROUP BY l.id
                 ORDER BY l.created_at DESC
             ");
-            $stmt->execute(['user_id' => $userId]);
+            $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Erro ao buscar empréstimos: " . $e->getMessage());
@@ -46,9 +46,9 @@ class LoanService {
                 FROM loans l
                 INNER JOIN clients c ON l.client_id = c.id
                 INNER JOIN wallets w ON l.wallet_id = w.id
-                WHERE l.id = :id AND l.user_id = :user_id
+                WHERE l.id = :id
             ");
-            $stmt->execute(['id' => $id, 'user_id' => $userId]);
+            $stmt->execute(['id' => $id]);
             return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Erro ao buscar empréstimo: " . $e->getMessage());
@@ -61,8 +61,8 @@ class LoanService {
             $this->db->beginTransaction();
 
             // Verificar se carteira tem saldo
-            $stmt = $this->db->prepare("SELECT balance FROM wallets WHERE id = :id AND user_id = :user_id");
-            $stmt->execute(['id' => $walletId, 'user_id' => $userId]);
+            $stmt = $this->db->prepare("SELECT balance FROM wallets WHERE id = :id");
+            $stmt->execute(['id' => $walletId]);
             $wallet = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$wallet || $wallet['balance'] < $amount) {
@@ -83,11 +83,10 @@ class LoanService {
 
             // Criar empréstimo
             $stmt = $this->db->prepare("
-                INSERT INTO loans (user_id, client_id, wallet_id, amount, interest_rate, interest_amount, total_amount, installments_count, status, created_at)
-                VALUES (:user_id, :client_id, :wallet_id, :amount, :interest_rate, :interest_amount, :total_amount, :installments_count, 'active', NOW())
+                INSERT INTO loans (client_id, wallet_id, amount, interest_rate, interest_amount, total_amount, installments_count, status, created_at)
+                VALUES (:client_id, :wallet_id, :amount, :interest_rate, :interest_amount, :total_amount, :installments_count, 'active', NOW())
             ");
             $stmt->execute([
-                'user_id' => $userId,
                 'client_id' => $clientId,
                 'wallet_id' => $walletId,
                 'amount' => $amount,
@@ -104,7 +103,7 @@ class LoanService {
             for ($i = 1; $i <= $installmentsCount; $i++) {
                 $dueDate->modify('+1 month');
                 $stmt = $this->db->prepare("
-                    INSERT INTO installments (loan_id, installment_number, amount, due_date, status, created_at)
+                    INSERT INTO loan_installments (loan_id, installment_number, amount, due_date, status, created_at)
                     VALUES (:loan_id, :installment_number, :amount, :due_date, 'pending', NOW())
                 ");
                 $stmt->execute([
@@ -118,18 +117,17 @@ class LoanService {
             // Debitar da carteira
             $stmt = $this->db->prepare("
                 UPDATE wallets SET balance = balance - :amount, updated_at = NOW()
-                WHERE id = :id AND user_id = :user_id
+                WHERE id = :id
             ");
             $stmt->execute([
                 'id' => $walletId,
-                'user_id' => $userId,
                 'amount' => $amount
             ]);
 
             // Registrar transação
             $stmt = $this->db->prepare("
-                INSERT INTO transactions (wallet_id, type, amount, description, reference_type, reference_id, created_at)
-                VALUES (:wallet_id, 'loan_disbursement', :amount, :description, 'loan', :loan_id, NOW())
+                INSERT INTO wallet_transactions (wallet_id, type, amount, description, reference_type, reference_id, created_at)
+                VALUES (:wallet_id, 'loan_out', :amount, :description, 'loan', :loan_id, NOW())
             ");
             $stmt->execute([
                 'wallet_id' => $walletId,
@@ -155,7 +153,7 @@ class LoanService {
             }
 
             $stmt = $this->db->prepare("
-                SELECT * FROM installments
+                SELECT * FROM loan_installments
                 WHERE loan_id = :loan_id
                 ORDER BY installment_number ASC
             ");
@@ -173,8 +171,8 @@ class LoanService {
 
             // Buscar parcela e empréstimo
             $stmt = $this->db->prepare("
-                SELECT i.*, l.wallet_id, l.user_id
-                FROM installments i
+                SELECT i.*, l.wallet_id
+                FROM loan_installments i
                 INNER JOIN loans l ON i.loan_id = l.id
                 WHERE i.id = :id
             ");
@@ -186,11 +184,6 @@ class LoanService {
                 return ['success' => false, 'error' => 'Parcela não encontrada'];
             }
 
-            if ($installment['user_id'] != $userId) {
-                $this->db->rollBack();
-                return ['success' => false, 'error' => 'Sem permissão'];
-            }
-
             if ($installment['status'] === 'paid') {
                 $this->db->rollBack();
                 return ['success' => false, 'error' => 'Parcela já foi paga'];
@@ -198,7 +191,7 @@ class LoanService {
 
             // Marcar parcela como paga
             $stmt = $this->db->prepare("
-                UPDATE installments
+                UPDATE loan_installments
                 SET status = 'paid', paid_date = NOW(), updated_at = NOW()
                 WHERE id = :id
             ");
@@ -217,8 +210,8 @@ class LoanService {
 
             // Registrar transação
             $stmt = $this->db->prepare("
-                INSERT INTO transactions (wallet_id, type, amount, description, reference_type, reference_id, created_at)
-                VALUES (:wallet_id, 'payment_received', :amount, :description, 'installment', :installment_id, NOW())
+                INSERT INTO wallet_transactions (wallet_id, type, amount, description, reference_type, reference_id, created_at)
+                VALUES (:wallet_id, 'loan_payment', :amount, :description, 'installment', :installment_id, NOW())
             ");
             $stmt->execute([
                 'wallet_id' => $installment['wallet_id'],
@@ -230,7 +223,7 @@ class LoanService {
             // Verificar se todas parcelas foram pagas
             $stmt = $this->db->prepare("
                 SELECT COUNT(*) as total, COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid
-                FROM installments WHERE loan_id = :loan_id
+                FROM loan_installments WHERE loan_id = :loan_id
             ");
             $stmt->execute(['loan_id' => $installment['loan_id']]);
             $counts = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -255,7 +248,7 @@ class LoanService {
     public function updateOverdueInstallments() {
         try {
             $stmt = $this->db->prepare("
-                UPDATE installments
+                UPDATE loan_installments
                 SET status = 'overdue'
                 WHERE status = 'pending' AND due_date < CURDATE()
             ");

@@ -19,14 +19,12 @@ $sql = "
     SELECT
         t.*,
         w.name as wallet_name
-    FROM transactions t
+    FROM wallet_transactions t
     INNER JOIN wallets w ON t.wallet_id = w.id
-    WHERE w.user_id = :user_id
-      AND DATE(t.created_at) BETWEEN :start_date AND :end_date
+    WHERE DATE(t.created_at) BETWEEN :start_date AND :end_date
 ";
 
 $params = [
-    'user_id' => $userId,
     'start_date' => $startDate,
     'end_date' => $endDate
 ];
@@ -42,8 +40,8 @@ $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$totalEntradas = array_sum(array_map(fn($t) => in_array($t['type'], ['credit', 'payment_received']) ? $t['amount'] : 0, $transactions));
-$totalSaidas = array_sum(array_map(fn($t) => in_array($t['type'], ['debit', 'loan_disbursement']) ? $t['amount'] : 0, $transactions));
+$totalEntradas = array_sum(array_map(fn($t) => in_array($t['type'], ['deposit', 'transfer_in', 'loan_payment']) ? $t['amount'] : 0, $transactions));
+$totalSaidas = array_sum(array_map(fn($t) => in_array($t['type'], ['withdrawal', 'transfer_out', 'loan_out']) ? $t['amount'] : 0, $transactions));
 $saldo = $totalEntradas - $totalSaidas;
 
 $pageTitle = 'Fluxo de Caixa';
@@ -89,26 +87,26 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 </div>
 
 <div class="stats-grid" style="margin-bottom: 2rem;">
-    <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
-        <div class="stat-value">R$ <?= number_format($totalEntradas, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Total de Entradas</div>
+    <div class="stat-card" style="border-left: 4px solid #11C76F;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalEntradas, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total de Entradas</div>
     </div>
 
-    <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
-        <div class="stat-value">R$ <?= number_format($totalSaidas, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Total de Saídas</div>
+    <div class="stat-card" style="border-left: 4px solid #EA580C;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalSaidas, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total de Saídas</div>
     </div>
 
-    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-        <div class="stat-value" style="color: <?= $saldo >= 0 ? 'white' : '#ffcccb' ?>">
+    <div class="stat-card" style="border-left: 4px solid #0D9488;">
+        <div class="stat-value" style="color: <?= $saldo >= 0 ? '#1C1C1C' : '#DC2626' ?>;">
             R$ <?= number_format($saldo, 2, ',', '.') ?>
         </div>
-        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Saldo do Período</div>
+        <div class="stat-label" style="color: #6b7280;">Saldo do Período</div>
     </div>
 
-    <div class="stat-card">
-        <div class="stat-value"><?= count($transactions) ?></div>
-        <div class="stat-label">Total de Transações</div>
+    <div class="stat-card" style="border-left: 4px solid #6b7280;">
+        <div class="stat-value" style="color: #1C1C1C;"><?= count($transactions) ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total de Transações</div>
     </div>
 </div>
 
@@ -144,18 +142,20 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                             <td>
                                 <?php
                                 $badges = [
-                                    'credit' => '<span class="badge badge-success">💰 Entrada</span>',
-                                    'debit' => '<span class="badge badge-danger">💸 Saída</span>',
-                                    'loan_disbursement' => '<span class="badge badge-warning">📤 Empréstimo</span>',
-                                    'payment_received' => '<span class="badge badge-info">📥 Pagamento</span>'
+                                    'deposit' => '<span class="badge badge-success">💰 Depósito</span>',
+                                    'withdrawal' => '<span class="badge badge-danger">💸 Retirada</span>',
+                                    'transfer_in' => '<span class="badge badge-info">📥 Transferência Recebida</span>',
+                                    'transfer_out' => '<span class="badge badge-warning">📤 Transferência Enviada</span>',
+                                    'loan_out' => '<span class="badge badge-warning">📤 Empréstimo Concedido</span>',
+                                    'loan_payment' => '<span class="badge badge-success">📥 Pagamento Recebido</span>'
                                 ];
                                 echo $badges[$transaction['type']] ?? $transaction['type'];
                                 ?>
                             </td>
                             <td><?= htmlspecialchars($transaction['description']) ?></td>
                             <td class="text-right">
-                                <strong style="color: <?= in_array($transaction['type'], ['credit', 'payment_received']) ? '#10b981' : '#e74c3c' ?>">
-                                    <?= in_array($transaction['type'], ['credit', 'payment_received']) ? '+' : '-' ?>
+                                <strong style="color: <?= in_array($transaction['type'], ['deposit', 'transfer_in', 'loan_payment']) ? '#10b981' : '#e74c3c' ?>">
+                                    <?= in_array($transaction['type'], ['deposit', 'transfer_in', 'loan_payment']) ? '+' : '-' ?>
                                     R$ <?= number_format($transaction['amount'], 2, ',', '.') ?>
                                 </strong>
                             </td>

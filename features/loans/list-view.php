@@ -30,21 +30,21 @@ $ativos = count(array_filter($loans, fn($l) => $l['status'] === 'active'));
 ?>
 
 <div class="stats-grid" style="margin-bottom: 2rem;">
-    <div class="stat-card">
-        <div class="stat-value"><?= count($loans) ?></div>
-        <div class="stat-label">Total de Empréstimos</div>
+    <div class="stat-card" style="border-left: 4px solid #6b7280;">
+        <div class="stat-value" style="color: #1C1C1C;"><?= count($loans) ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total de Empréstimos</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-value"><?= $ativos ?></div>
-        <div class="stat-label">Empréstimos Ativos</div>
+    <div class="stat-card" style="border-left: 4px solid #11C76F;">
+        <div class="stat-value" style="color: #1C1C1C;"><?= $ativos ?></div>
+        <div class="stat-label" style="color: #6b7280;">Empréstimos Ativos</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-value">R$ <?= number_format($totalEmprestado, 2, ',', '.') ?></div>
-        <div class="stat-label">Total Emprestado</div>
+    <div class="stat-card" style="border-left: 4px solid #EA580C;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalEmprestado, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total Emprestado</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-value">R$ <?= number_format($totalReceber, 2, ',', '.') ?></div>
-        <div class="stat-label">A Receber</div>
+    <div class="stat-card" style="border-left: 4px solid #0D9488;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalReceber, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">A Receber</div>
     </div>
 </div>
 

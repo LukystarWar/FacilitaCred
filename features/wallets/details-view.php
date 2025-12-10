@@ -37,13 +37,15 @@ require_once __DIR__ . '/../../shared/layout/header.php';
     <div>
         <a href="<?= BASE_URL ?>/wallets" class="btn-back">← Voltar</a>
         <h1><?= htmlspecialchars($wallet['name']) ?></h1>
-        <?php if ($wallet['description']): ?>
-            <p class="page-subtitle"><?= htmlspecialchars($wallet['description']) ?></p>
-        <?php endif; ?>
     </div>
-    <button class="btn btn-primary" onclick="openTransactionModal()">
-        + Nova Movimentação
-    </button>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="<?= BASE_URL ?>/wallets/transfer?wallet_id=<?= $wallet['id'] ?>" class="btn btn-secondary">
+            ↔️ Transferir
+        </a>
+        <a href="<?= BASE_URL ?>/wallets/transaction?wallet_id=<?= $wallet['id'] ?>" class="btn btn-primary">
+            + Movimentar
+        </a>
+    </div>
 </div>
 
 <div class="stats-grid" style="margin-bottom: 2rem;">
@@ -51,13 +53,13 @@ require_once __DIR__ . '/../../shared/layout/header.php';
         <div class="stat-value">R$ <?= number_format($wallet['balance'], 2, ',', '.') ?></div>
         <div class="stat-label">Saldo Atual</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-value"><?= count($transactions) ?></div>
-        <div class="stat-label">Total de Transações</div>
+    <div class="stat-card" style="border-left: 4px solid #6b7280;">
+        <div class="stat-value" style="color: #1C1C1C;"><?= count($transactions) ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total de Transações</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-value"><?= date('d/m/Y', strtotime($wallet['created_at'])) ?></div>
-        <div class="stat-label">Criada em</div>
+    <div class="stat-card" style="border-left: 4px solid #6b7280;">
+        <div class="stat-value" style="color: #1C1C1C;"><?= date('d/m/Y', strtotime($wallet['created_at'])) ?></div>
+        <div class="stat-label" style="color: #6b7280;">Criada em</div>
     </div>
 </div>
 
@@ -91,20 +93,25 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                                 <small class="text-muted"><?= date('H:i:s', strtotime($transaction['created_at'])) ?></small>
                             </td>
                             <td>
-                                <?php if ($transaction['type'] === 'credit'): ?>
-                                    <span class="badge badge-success">💰 Entrada</span>
-                                <?php elseif ($transaction['type'] === 'debit'): ?>
-                                    <span class="badge badge-danger">💸 Saída</span>
-                                <?php elseif ($transaction['type'] === 'loan_disbursement'): ?>
-                                    <span class="badge badge-warning">📤 Empréstimo</span>
-                                <?php elseif ($transaction['type'] === 'payment_received'): ?>
-                                    <span class="badge badge-info">📥 Pagamento</span>
-                                <?php endif; ?>
+                                <?php
+                                $badges = [
+                                    'deposit' => '<span class="badge badge-success">💰 Depósito</span>',
+                                    'withdrawal' => '<span class="badge badge-danger">💸 Retirada</span>',
+                                    'transfer_in' => '<span class="badge badge-info">📥 Transferência Recebida</span>',
+                                    'transfer_out' => '<span class="badge badge-warning">📤 Transferência Enviada</span>',
+                                    'loan_out' => '<span class="badge badge-warning">📤 Empréstimo</span>',
+                                    'loan_payment' => '<span class="badge badge-success">📥 Pagamento</span>'
+                                ];
+                                echo $badges[$transaction['type']] ?? $transaction['type'];
+                                ?>
                             </td>
                             <td><?= htmlspecialchars($transaction['description']) ?></td>
                             <td class="text-right">
-                                <span class="transaction-amount <?= $transaction['type'] === 'credit' || $transaction['type'] === 'payment_received' ? 'positive' : 'negative' ?>">
-                                    <?= $transaction['type'] === 'credit' || $transaction['type'] === 'payment_received' ? '+' : '-' ?>
+                                <?php
+                                $isIncome = in_array($transaction['type'], ['deposit', 'transfer_in', 'loan_payment']);
+                                ?>
+                                <span class="transaction-amount <?= $isIncome ? 'positive' : 'negative' ?>">
+                                    <?= $isIncome ? '+' : '-' ?>
                                     R$ <?= number_format($transaction['amount'], 2, ',', '.') ?>
                                 </span>
                             </td>
@@ -116,54 +123,10 @@ require_once __DIR__ . '/../../shared/layout/header.php';
     <?php endif; ?>
 </div>
 
-<!-- Modal: Nova Movimentação -->
-<div id="transactionModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Nova Movimentação</h2>
-            <button class="modal-close" onclick="closeModal('transactionModal')">&times;</button>
-        </div>
-        <form id="transactionForm" method="POST" action="<?= BASE_URL ?>/wallets/transaction">
-            <input type="hidden" name="wallet_id" value="<?= $wallet['id'] ?>">
-            <input type="hidden" name="redirect" value="details">
-            <input type="hidden" id="transaction_type" name="type" value="credit">
-
-            <div class="form-group">
-                <label>Tipo de Movimentação</label>
-                <div class="radio-group">
-                    <label class="radio-option">
-                        <input type="radio" name="type_radio" value="credit" checked onchange="document.getElementById('transaction_type').value='credit'">
-                        <span>💰 Adicionar Saldo</span>
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="type_radio" value="debit" onchange="document.getElementById('transaction_type').value='debit'">
-                        <span>💸 Retirar Saldo</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="amount">Valor *</label>
-                <input type="number" id="amount" name="amount" step="0.01" min="0.01" required placeholder="0,00">
-            </div>
-
-            <div class="form-group">
-                <label for="description">Descrição *</label>
-                <textarea id="description" name="description" rows="3" required placeholder="Motivo da movimentação"></textarea>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('transactionModal')">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Confirmar Movimentação</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <style>
 .btn-back {
     display: inline-block;
-    color: #667eea;
+    color: #11C76F;
     text-decoration: none;
     margin-bottom: 0.5rem;
     font-weight: 500;
@@ -173,13 +136,8 @@ require_once __DIR__ . '/../../shared/layout/header.php';
     text-decoration: underline;
 }
 
-.page-subtitle {
-    color: #7f8c8d;
-    margin: 0.5rem 0 0 0;
-}
-
 .stat-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #11C76F 0%, #0E9F59 100%);
     color: white;
 }
 
@@ -233,66 +191,6 @@ require_once __DIR__ . '/../../shared/layout/header.php';
     background: #d1ecf1;
     color: #0c5460;
 }
-
-.radio-group {
-    display: flex;
-    gap: 1rem;
-}
-
-.radio-option {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.radio-option:hover {
-    border-color: #667eea;
-    background: #f8f9ff;
-}
-
-.radio-option input[type="radio"] {
-    margin: 0;
-}
-
-.radio-option input[type="radio"]:checked + span {
-    font-weight: bold;
-    color: #667eea;
-}
-
-@media (max-width: 768px) {
-    .radio-group {
-        flex-direction: column;
-    }
-}
 </style>
-
-<script>
-function openTransactionModal() {
-    document.getElementById('transactionForm').reset();
-    document.getElementById('transaction_type').value = 'credit';
-    openModal('transactionModal');
-}
-
-function openModal(modalId) {
-    document.getElementById(modalId).style.display = 'flex';
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-// Fechar modal ao clicar fora
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = 'none';
-    }
-}
-</script>
 
 <?php require_once __DIR__ . '/../../shared/layout/footer.php'; ?>

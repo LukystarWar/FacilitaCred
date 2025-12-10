@@ -13,16 +13,16 @@
 }
 
 :root {
-    /* Colors */
-    --primary: #2563eb;
-    --primary-dark: #1e40af;
-    --success: #10b981;
+    /* PicPay-inspired Colors */
+    --primary: #11C76F;
+    --primary-dark: #0E9F59;
+    --success: #11C76F;
     --warning: #f59e0b;
     --danger: #ef4444;
-    --info: #3b82f6;
+    --info: #11C76F;
     --neutral: #6b7280;
     --neutral-light: #f3f4f6;
-    --neutral-dark: #1f2937;
+    --neutral-dark: #1C1C1C;
 
     /* Grays */
     --gray-50: #f9fafb;
@@ -37,7 +37,7 @@
     --gray-900: #111827;
 
     /* Typography */
-    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
     --font-size-base: 1rem;
@@ -71,12 +71,14 @@
     --header-height: 64px;
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+
 body {
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     line-height: 1.5;
     color: var(--gray-900);
-    background-color: var(--gray-50);
+    background-color: white;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -117,7 +119,7 @@ a:hover {
 
 .sidebar {
     width: var(--sidebar-width);
-    background-color: var(--gray-900);
+    background-color: var(--neutral-dark);
     color: white;
     position: fixed;
     top: 0;
@@ -133,10 +135,15 @@ a:hover {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.sidebar-header img {
+    border-radius: var(--radius-md);
+}
+
 .sidebar-brand {
-    font-size: var(--font-size-xl);
+    font-size: var(--font-size-2xl);
     font-weight: 700;
     color: white;
+    letter-spacing: -0.5px;
 }
 
 .sidebar-nav {
@@ -163,6 +170,20 @@ a:hover {
 .sidebar-nav-item i {
     margin-right: var(--spacing-md);
     font-size: var(--font-size-lg);
+}
+
+.sidebar-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: var(--spacing-md);
+    opacity: 0.8;
+    transition: all 0.2s;
+}
+
+.sidebar-nav-item:hover .sidebar-icon,
+.sidebar-nav-item.active .sidebar-icon {
+    opacity: 1;
+    transform: scale(1.1);
 }
 
 .main-content {
@@ -192,10 +213,17 @@ a:hover {
    ============================================ */
 .card {
     background: white;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     padding: var(--spacing-xl);
     margin-bottom: var(--spacing-lg);
+    border: 1px solid var(--gray-100);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
 }
 
 .card-header {
@@ -260,21 +288,27 @@ a:hover {
 }
 
 .btn-primary {
-    background-color: var(--primary);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(17, 199, 111, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
-    background-color: var(--primary-dark);
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+    box-shadow: 0 6px 16px rgba(17, 199, 111, 0.4);
+    transform: translateY(-2px);
 }
 
 .btn-success {
-    background-color: var(--success);
+    background: linear-gradient(135deg, var(--success) 0%, var(--primary-dark) 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(17, 199, 111, 0.3);
 }
 
 .btn-success:hover:not(:disabled) {
-    background-color: #059669;
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--success) 100%);
+    box-shadow: 0 6px 16px rgba(17, 199, 111, 0.4);
+    transform: translateY(-2px);
 }
 
 .btn-danger {
@@ -345,7 +379,7 @@ a:hover {
 .form-select:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 0 0 3px rgba(17, 199, 111, 0.1);
 }
 
 .form-control::placeholder {
@@ -419,34 +453,38 @@ textarea.form-control {
     align-items: center;
     padding: var(--spacing-xs) var(--spacing-md);
     font-size: var(--font-size-xs);
-    font-weight: 600;
-    border-radius: var(--radius-lg);
+    font-weight: 700;
+    border-radius: 100px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 
 .badge-success,
 .status-success {
-    background-color: #d1fae5;
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
     color: #065f46;
+    border: 1px solid #6ee7b7;
 }
 
 .badge-warning,
 .status-warning {
-    background-color: #fef3c7;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
     color: #92400e;
+    border: 1px solid #fcd34d;
 }
 
 .badge-danger,
 .status-danger {
-    background-color: #fee2e2;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     color: #991b1b;
+    border: 1px solid #fca5a5;
 }
 
 .badge-info,
 .status-info {
-    background-color: #dbeafe;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
     color: #1e40af;
+    border: 1px solid #93c5fd;
 }
 
 /* ============================================
@@ -707,15 +745,17 @@ textarea.form-control {
 
 .stat-card {
     background: white;
-    padding: var(--spacing-lg);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.2s, box-shadow 0.2s;
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--gray-100);
+    transition: all 0.3s ease;
 }
 
 .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    border-color: var(--primary);
 }
 
 .stat-value {
@@ -804,6 +844,9 @@ input[type="email"],
 input[type="password"],
 input[type="number"],
 input[type="tel"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
 textarea,
 select {
     display: block;
@@ -824,7 +867,7 @@ textarea:focus,
 select:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 0 0 3px rgba(17, 199, 111, 0.1);
 }
 
 small {

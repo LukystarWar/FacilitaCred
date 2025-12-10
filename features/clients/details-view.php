@@ -49,17 +49,17 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 </div>
 
 <div class="stats-grid" style="margin-bottom: 2rem;">
-    <div class="stat-card">
-        <div class="stat-value"><?= count($loans) ?></div>
-        <div class="stat-label">Total de Empréstimos</div>
+    <div class="stat-card" style="border-left: 4px solid #6b7280;">
+        <div class="stat-value" style="color: #1C1C1C;"><?= count($loans) ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total de Empréstimos</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-value"><?= count(array_filter($loans, fn($l) => $l['status'] === 'active')) ?></div>
-        <div class="stat-label">Empréstimos Ativos</div>
+    <div class="stat-card" style="border-left: 4px solid #11C76F;">
+        <div class="stat-value" style="color: #1C1C1C;"><?= count(array_filter($loans, fn($l) => $l['status'] === 'active')) ?></div>
+        <div class="stat-label" style="color: #6b7280;">Empréstimos Ativos</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-value">R$ <?= number_format(array_sum(array_map(fn($l) => $l['status'] === 'active' ? $l['total_amount'] : 0, $loans)), 2, ',', '.') ?></div>
-        <div class="stat-label">Dívida Ativa</div>
+    <div class="stat-card" style="border-left: 4px solid #EA580C;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format(array_sum(array_map(fn($l) => $l['status'] === 'active' ? $l['total_amount'] : 0, $loans)), 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Dívida Ativa</div>
     </div>
 </div>
 
@@ -252,7 +252,7 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 <style>
 .btn-back {
     display: inline-block;
-    color: #667eea;
+    color: #11C76F;
     text-decoration: none;
     margin-bottom: 0.5rem;
     font-weight: 500;
