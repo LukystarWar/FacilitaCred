@@ -4,15 +4,16 @@
  */
 
 // Define a rota atual para highlight do menu
-$currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
 $currentPath = str_replace('/FacilitaCred/public', '', $currentPath);
+$currentPath = $currentPath ?: '/';
 
 function isActive($path) {
     global $currentPath;
     if ($path === '/dashboard' && ($currentPath === '/' || $currentPath === '/dashboard')) {
         return 'active';
     }
-    return strpos($currentPath, $path) === 0 && $path !== '/dashboard' ? 'active' : '';
+    return strpos($currentPath ?? '', $path) === 0 && $path !== '/dashboard' ? 'active' : '';
 }
 ?>
 

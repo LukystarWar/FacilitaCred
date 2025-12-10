@@ -17,4 +17,28 @@
         <div class="app-container">
             <?php require_once SHARED_PATH . '/layout/sidebar.php'; ?>
             <main class="main-content">
+                <!-- Flash Messages -->
+                <?php if (Session::hasFlash('success')): ?>
+                    <div class="alert alert-success">
+                        <?= htmlspecialchars(Session::getFlash('success')) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (Session::hasFlash('error')): ?>
+                    <div class="alert alert-error">
+                        <?= htmlspecialchars(Session::getFlash('error')) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (Session::hasFlash('warning')): ?>
+                    <div class="alert alert-warning">
+                        <?= htmlspecialchars(Session::getFlash('warning')) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (Session::hasFlash('info')): ?>
+                    <div class="alert alert-info">
+                        <?= htmlspecialchars(Session::getFlash('info')) ?>
+                    </div>
+                <?php endif; ?>
     <?php endif; ?>

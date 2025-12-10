@@ -1,0 +1,22 @@
+{
+  "name": "facilita-cred",
+  "version": "1.0.0",
+  "description": "Sistema de Gestão de Empréstimos - Testes E2E",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:auth": "playwright test tests/auth",
+    "test:wallets": "playwright test tests/wallets",
+    "test:clients": "playwright test tests/clients",
+    "test:loans": "playwright test tests/loans",
+    "test:reports": "playwright test tests/reports",
+    "test:ui": "playwright test --ui"
+  },
+  "keywords": ["e2e", "testing", "playwright"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}

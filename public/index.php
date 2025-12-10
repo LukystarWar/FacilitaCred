@@ -12,9 +12,13 @@ require_once __DIR__ . '/../config/database.php';
 require_once CORE_PATH . '/Database.php';
 require_once CORE_PATH . '/Session.php';
 require_once CORE_PATH . '/Router.php';
+require_once CORE_PATH . '/ErrorHandler.php';
 
 // Carrega helpers
 require_once SHARED_PATH . '/helpers/functions.php';
+
+// Registra handler de erros
+ErrorHandler::register();
 
 // Inicia a sessão
 Session::start();
@@ -75,14 +79,22 @@ $router->get('/wallets', function() {
 
 $router->post('/wallets/create', function() {
     requireAuth();
-    require FEATURES_PATH . '/wallets/wallet-actions.php';
+    require FEATURES_PATH . '/wallets/create-action.php';
 });
 
-$router->post('/wallets/edit/:id', function($id) {
+$router->post('/wallets/update', function() {
     requireAuth();
-    $_POST['action'] = 'edit';
-    $_POST['wallet_id'] = $id;
-    require FEATURES_PATH . '/wallets/wallet-actions.php';
+    require FEATURES_PATH . '/wallets/update-action.php';
+});
+
+$router->get('/wallets/delete', function() {
+    requireAuth();
+    require FEATURES_PATH . '/wallets/delete-action.php';
+});
+
+$router->post('/wallets/transaction', function() {
+    requireAuth();
+    require FEATURES_PATH . '/wallets/transaction-action.php';
 });
 
 $router->get('/wallets/:id', function($id) {
@@ -99,14 +111,17 @@ $router->get('/clients', function() {
 
 $router->post('/clients/create', function() {
     requireAuth();
-    require FEATURES_PATH . '/clients/client-actions.php';
+    require FEATURES_PATH . '/clients/create-action.php';
 });
 
-$router->post('/clients/edit/:id', function($id) {
+$router->post('/clients/update', function() {
     requireAuth();
-    $_POST['action'] = 'edit';
-    $_POST['client_id'] = $id;
-    require FEATURES_PATH . '/clients/client-actions.php';
+    require FEATURES_PATH . '/clients/update-action.php';
+});
+
+$router->get('/clients/delete', function() {
+    requireAuth();
+    require FEATURES_PATH . '/clients/delete-action.php';
 });
 
 $router->get('/clients/:id', function($id) {
@@ -128,19 +143,18 @@ $router->get('/loans/create', function() {
 
 $router->post('/loans/create', function() {
     requireAuth();
-    require FEATURES_PATH . '/loans/loan-actions.php';
+    require FEATURES_PATH . '/loans/create-action.php';
+});
+
+$router->post('/loans/pay', function() {
+    requireAuth();
+    require FEATURES_PATH . '/loans/payment-action.php';
 });
 
 $router->get('/loans/:id', function($id) {
     requireAuth();
     $_GET['id'] = $id;
     require FEATURES_PATH . '/loans/details-view.php';
-});
-
-$router->post('/loans/:id/pay', function($id) {
-    requireAuth();
-    $_POST['loan_id'] = $id;
-    require FEATURES_PATH . '/loans/payment-action.php';
 });
 
 // Relatórios

@@ -121,6 +121,14 @@ class Session
     }
 
     /**
+     * Alias para flash() - para compatibilidade
+     */
+    public static function setFlash($key, $message)
+    {
+        self::flash($key, $message);
+    }
+
+    /**
      * Retorna e remove uma mensagem flash
      */
     public static function getFlash($key)
@@ -136,5 +144,17 @@ class Session
     public static function hasFlash($key)
     {
         return self::has('flash_' . $key);
+    }
+
+    /**
+     * Requer autenticação - redireciona se não autenticado
+     */
+    public static function requireAuth()
+    {
+        if (!self::isAuthenticated()) {
+            self::flash('error', 'Você precisa estar autenticado para acessar esta página.');
+            header('Location: ' . BASE_URL . '/login');
+            exit;
+        }
     }
 }

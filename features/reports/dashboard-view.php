@@ -1,102 +1,219 @@
 <?php
-/**
- * Dashboard View
- * Tela principal do sistema
- */
+require_once __DIR__ . '/../../core/Session.php';
+require_once __DIR__ . '/../../core/Database.php';
+require_once __DIR__ . '/../../features/wallets/wallet-service.php';
+require_once __DIR__ . '/../../features/loans/loan-service.php';
+
+Session::requireAuth();
+
+$userId = Session::get('user_id');
+$walletService = new WalletService();
+$loanService = new LoanService();
+
+$totalCarteiras = $walletService->getTotalBalance($userId);
+$wallets = $walletService->getAllWallets($userId);
+$loans = $loanService->getAllLoans($userId);
+
+$totalEmprestado = array_sum(array_column($loans, 'amount'));
+$totalReceber = array_sum(array_map(function($l) {
+    if ($l['status'] !== 'active') return 0;
+    $total = $l['total_amount'];
+    $perInstallment = $total / $l['total_installments'];
+    $remaining = $total - ($l['paid_installments'] * $perInstallment);
+    return $remaining;
+}, $loans));
+$lucroTotal = array_sum(array_column($loans, 'interest_amount'));
+
+// Parcelas próximas (próximos 7 dias)
+$db = Database::getInstance()->getConnection();
+$stmt = $db->prepare("
+    SELECT i.*, l.client_id, c.name as client_name, l.id as loan_id
+    FROM installments i
+    INNER JOIN loans l ON i.loan_id = l.id
+    INNER JOIN clients c ON l.client_id = c.id
+    WHERE l.user_id = :user_id
+      AND i.status = 'pending'
+      AND i.due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+    ORDER BY i.due_date ASC
+    LIMIT 5
+");
+$stmt->execute(['user_id' => $userId]);
+$upcomingInstallments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Parcelas atrasadas
+$stmt = $db->prepare("
+    SELECT i.*, l.client_id, c.name as client_name, l.id as loan_id
+    FROM installments i
+    INNER JOIN loans l ON i.loan_id = l.id
+    INNER JOIN clients c ON l.client_id = c.id
+    WHERE l.user_id = :user_id
+      AND i.status IN ('pending', 'overdue')
+      AND i.due_date < CURDATE()
+    ORDER BY i.due_date ASC
+    LIMIT 5
+");
+$stmt->execute(['user_id' => $userId]);
+$overdueInstallments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle = 'Dashboard';
-require_once SHARED_PATH . '/layout/header.php';
-
-// Por enquanto, vamos criar um dashboard básico
-// Será expandido na Fase 5 com métricas reais
+require_once __DIR__ . '/../../shared/layout/header.php';
 ?>
 
-<div class="content-header">
-    <h1 class="content-title">Dashboard</h1>
-    <p class="content-subtitle">Visão geral do sistema</p>
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="<?= BASE_URL ?>/wallets" class="btn btn-secondary">Carteiras</a>
+        <a href="<?= BASE_URL ?>/loans/create" class="btn btn-primary">+ Novo Empréstimo</a>
+    </div>
 </div>
 
-<?php if (Session::hasFlash('success')): ?>
-    <div class="alert alert-success">
-        <?= sanitize(Session::getFlash('success')) ?>
+<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="stat-value">R$ <?= number_format($totalCarteiras, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Total em Carteiras</div>
+    </div>
+
+    <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+        <div class="stat-value">R$ <?= number_format($totalEmprestado, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Total Emprestado</div>
+    </div>
+
+    <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+        <div class="stat-value">R$ <?= number_format($totalReceber, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Total a Receber</div>
+    </div>
+
+    <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+        <div class="stat-value">R$ <?= number_format($lucroTotal, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Lucro Total (Juros)</div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <?php if (!empty($overdueInstallments)): ?>
+        <div class="card">
+            <div class="card-header">
+                <h2 style="color: #e74c3c;">🚨 Parcelas Atrasadas</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Vencimento</th>
+                            <th>Valor</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($overdueInstallments as $inst): ?>
+                            <tr>
+                                <td>
+                                    <strong><?= htmlspecialchars($inst['client_name']) ?></strong>
+                                    <br><small class="text-muted">Parcela #<?= $inst['installment_number'] ?></small>
+                                </td>
+                                <td>
+                                    <?= date('d/m/Y', strtotime($inst['due_date'])) ?>
+                                    <br><small style="color: #e74c3c;">
+                                        <?php
+                                        $diff = (new DateTime())->diff(new DateTime($inst['due_date']));
+                                        echo $diff->days . ' dias de atraso';
+                                        ?>
+                                    </small>
+                                </td>
+                                <td><strong>R$ <?= number_format($inst['amount'], 2, ',', '.') ?></strong></td>
+                                <td>
+                                    <a href="<?= BASE_URL ?>/loans/<?= $inst['loan_id'] ?>" class="btn btn-sm btn-outline">
+                                        Ver
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>📅 Próximos Vencimentos (7 dias)</h2>
+        </div>
+        <?php if (empty($upcomingInstallments)): ?>
+            <div style="padding: 2rem; text-align: center; color: #95a5a6;">
+                Nenhuma parcela vencendo nos próximos 7 dias.
+            </div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Vencimento</th>
+                            <th>Valor</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($upcomingInstallments as $inst): ?>
+                            <tr>
+                                <td>
+                                    <strong><?= htmlspecialchars($inst['client_name']) ?></strong>
+                                    <br><small class="text-muted">Parcela #<?= $inst['installment_number'] ?></small>
+                                </td>
+                                <td>
+                                    <?= date('d/m/Y', strtotime($inst['due_date'])) ?>
+                                    <br><small class="text-muted">
+                                        <?php
+                                        $diff = (new DateTime($inst['due_date']))->diff(new DateTime());
+                                        echo 'Em ' . $diff->days . ' dias';
+                                        ?>
+                                    </small>
+                                </td>
+                                <td><strong>R$ <?= number_format($inst['amount'], 2, ',', '.') ?></strong></td>
+                                <td>
+                                    <a href="<?= BASE_URL ?>/loans/<?= $inst['loan_id'] ?>" class="btn btn-sm btn-outline">
+                                        Ver
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<?php if (empty($wallets)): ?>
+    <div class="card">
+        <div class="card-header">
+            <h2>🚀 Comece Agora</h2>
+        </div>
+        <div style="padding: 2rem;">
+            <h3 style="margin-top: 0;">Primeiros Passos:</h3>
+            <ol style="line-height: 2;">
+                <li><strong>Criar Carteiras:</strong> <a href="<?= BASE_URL ?>/wallets">Acesse aqui</a> para criar suas carteiras</li>
+                <li><strong>Cadastrar Clientes:</strong> <a href="<?= BASE_URL ?>/clients">Adicione seus clientes</a></li>
+                <li><strong>Registrar Empréstimos:</strong> <a href="<?= BASE_URL ?>/loans/create">Crie seu primeiro empréstimo</a></li>
+            </ol>
+        </div>
     </div>
 <?php endif; ?>
 
-<?php if (Session::hasFlash('error')): ?>
-    <div class="alert alert-error">
-        <?= sanitize(Session::getFlash('error')) ?>
-    </div>
-<?php endif; ?>
+<style>
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
 
-<div class="grid grid-4">
-    <div class="metric-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div class="metric-value">R$ 0,00</div>
-        <div class="metric-label">Total em Carteiras</div>
-    </div>
+@media (max-width: 768px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 
-    <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-        <div class="metric-value">R$ 0,00</div>
-        <div class="metric-label">Total Emprestado</div>
-    </div>
-
-    <div class="metric-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-        <div class="metric-value">R$ 0,00</div>
-        <div class="metric-label">Total a Receber</div>
-    </div>
-
-    <div class="metric-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-        <div class="metric-value">R$ 0,00</div>
-        <div class="metric-label">Lucro Total</div>
-    </div>
-</div>
-
-<div class="card">
-    <div class="card-header">
-        <h2 class="card-title">Bem-vindo ao <?= APP_NAME ?>!</h2>
-    </div>
-    <div class="card-body">
-        <p style="margin-bottom: 1rem; color: var(--gray-700);">
-            Sistema de gestão de empréstimos está pronto para uso.
-        </p>
-
-        <h3 style="font-size: 1.125rem; margin-bottom: 0.5rem; margin-top: 1.5rem;">🚀 Próximos passos:</h3>
-        <ul style="color: var(--gray-700); line-height: 1.8;">
-            <li><strong>1. Criar Carteiras:</strong> Acesse o menu "Carteiras" para criar suas carteiras de gestão</li>
-            <li><strong>2. Cadastrar Clientes:</strong> Vá em "Clientes" para adicionar seus clientes</li>
-            <li><strong>3. Registrar Empréstimos:</strong> Em "Empréstimos" você pode criar novos empréstimos</li>
-            <li><strong>4. Acompanhar Relatórios:</strong> Visualize entradas, saídas e lucros em "Relatórios"</li>
-        </ul>
-
-        <div style="margin-top: 2rem; padding: 1rem; background: var(--gray-50); border-radius: var(--radius-md);">
-            <p style="margin: 0; color: var(--gray-600); font-size: 0.875rem;">
-                💡 <strong>Dica:</strong> Este dashboard será preenchido automaticamente com métricas reais conforme você utilizar o sistema.
-            </p>
-        </div>
-    </div>
-</div>
-
-<div class="grid grid-2">
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Atividade Recente</h3>
-        </div>
-        <div class="card-body">
-            <p style="color: var(--gray-500); text-align: center; padding: 2rem;">
-                Nenhuma atividade registrada ainda.
-            </p>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Parcelas Próximas do Vencimento</h3>
-        </div>
-        <div class="card-body">
-            <p style="color: var(--gray-500); text-align: center; padding: 2rem;">
-                Nenhuma parcela próxima do vencimento.
-            </p>
-        </div>
-    </div>
-</div>
-
-<?php require_once SHARED_PATH . '/layout/footer.php'; ?>
+<?php require_once __DIR__ . '/../../shared/layout/footer.php'; ?>
