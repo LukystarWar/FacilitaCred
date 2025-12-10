@@ -130,6 +130,22 @@ CREATE TABLE IF NOT EXISTS system_settings (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- Tabela de Templates WhatsApp
+-- ============================================
+CREATE TABLE IF NOT EXISTS whatsapp_templates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL COMMENT 'Nome do template',
+    description TEXT NULL COMMENT 'Descrição do template',
+    message TEXT NOT NULL COMMENT 'Mensagem do template',
+    category ENUM('cobranca', 'lembrete', 'confirmacao', 'outros') DEFAULT 'outros' COMMENT 'Categoria do template',
+    is_active TINYINT(1) DEFAULT 1 COMMENT 'Template ativo',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_category (category),
+    INDEX idx_is_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- Inserir dados iniciais
 -- ============================================
 
@@ -153,6 +169,13 @@ INSERT INTO system_settings (setting_key, setting_value, setting_type, descripti
 ('min_loan_amount', '100', 'number', 'Valor mínimo de empréstimo (R$)', 'loan_rules'),
 ('max_loan_amount', '100000', 'number', 'Valor máximo de empréstimo (R$)', 'loan_rules'),
 ('max_installments', '24', 'number', 'Número máximo de parcelas', 'loan_rules');
+
+-- Templates WhatsApp iniciais
+INSERT INTO whatsapp_templates (name, description, message, category, is_active) VALUES
+('Cobrança Padrão', 'Template padrão para cobrança de parcelas vencidas', 'Olá {cliente}! 👋\n\nEste é um lembrete sobre a parcela {numero_parcela}/{total_parcelas} do seu empréstimo.\n\n💰 Valor: R$ {valor}\n📅 Vencimento: {vencimento}\n\nPor favor, efetue o pagamento o quanto antes.\n\nQualquer dúvida, estou à disposição!', 'cobranca', 1),
+('Lembrete Vencimento Próximo', 'Lembrete amigável de parcela próxima ao vencimento', 'Oi {cliente}! 😊\n\nSó passando para lembrar que sua parcela vence em breve:\n\n📌 Parcela {numero_parcela}/{total_parcelas}\n💵 Valor: R$ {valor}\n📅 Vence em: {vencimento}\n\nConte comigo para qualquer dúvida!', 'lembrete', 1),
+('Confirmação de Pagamento', 'Mensagem de confirmação após recebimento de pagamento', 'Olá {cliente}! ✅\n\nConfirmamos o recebimento do pagamento da parcela {numero_parcela}/{total_parcelas}.\n\n💰 Valor pago: R$ {valor}\n📅 Data: {data_pagamento}\n\nObrigado pela pontualidade! 🙏', 'confirmacao', 1),
+('Empréstimo Quitado', 'Mensagem de parabéns pela quitação do empréstimo', 'Parabéns {cliente}! 🎉\n\nSeu empréstimo foi quitado com sucesso!\n\n✅ Todas as {total_parcelas} parcelas foram pagas\n💰 Total pago: R$ {total_pago}\n\nFoi um prazer fazer negócio com você. Conte conosco sempre que precisar!', 'confirmacao', 1);
 
 -- ============================================
 -- Views úteis para relatórios

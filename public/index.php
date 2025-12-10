@@ -224,6 +224,37 @@ $router->post('/settings/update-loan-rules', function() {
     require FEATURES_PATH . '/settings/update-loan-rules-action.php';
 });
 
+// WhatsApp Templates
+$router->get('/whatsapp/templates', function() {
+    requireAuth();
+    require FEATURES_PATH . '/whatsapp/templates-list-view.php';
+});
+
+$router->get('/whatsapp/templates/create', function() {
+    requireAuth();
+    require FEATURES_PATH . '/whatsapp/templates-create-view.php';
+});
+
+$router->post('/whatsapp/templates/create', function() {
+    requireAuth();
+    require FEATURES_PATH . '/whatsapp/templates-create-action.php';
+});
+
+$router->get('/whatsapp/templates/edit', function() {
+    requireAuth();
+    require FEATURES_PATH . '/whatsapp/templates-edit-view.php';
+});
+
+$router->post('/whatsapp/templates/update', function() {
+    requireAuth();
+    require FEATURES_PATH . '/whatsapp/templates-update-action.php';
+});
+
+$router->get('/whatsapp/templates/delete', function() {
+    requireAuth();
+    require FEATURES_PATH . '/whatsapp/templates-delete-action.php';
+});
+
 // ============================================
 // ROTA NÃO ENCONTRADA
 // ============================================
