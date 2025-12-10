@@ -360,4 +360,97 @@ class LoanService {
             'installments_count' => $installmentsCount
         ];
     }
+
+    public function payoffLoan($loanId, $walletId, $finalAmount, $adjustmentAmount, $adjustmentReason, $paymentMethod, $userId) {
+        try {
+            $this->db->beginTransaction();
+
+            // Buscar empréstimo
+            $loan = $this->getLoanById($loanId, $userId);
+            if (!$loan || $loan['status'] === 'paid') {
+                $this->db->rollBack();
+                return ['success' => false, 'error' => 'Empréstimo não encontrado ou já quitado'];
+            }
+
+            // Buscar parcelas pendentes
+            $stmt = $this->db->prepare("
+                SELECT * FROM loan_installments
+                WHERE loan_id = :loan_id AND status != 'paid'
+                ORDER BY installment_number ASC
+            ");
+            $stmt->execute(['loan_id' => $loanId]);
+            $pendingInstallments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($pendingInstallments)) {
+                $this->db->rollBack();
+                return ['success' => false, 'error' => 'Não há parcelas pendentes'];
+            }
+
+            $totalPending = array_sum(array_map(fn($i) => $i['amount'], $pendingInstallments));
+            $countPending = count($pendingInstallments);
+
+            // Distribuir o ajuste proporcionalmente entre as parcelas
+            $adjustmentPerInstallment = $countPending > 0 ? $adjustmentAmount / $countPending : 0;
+
+            // Marcar todas as parcelas pendentes como pagas
+            foreach ($pendingInstallments as $installment) {
+                $amountPaid = $installment['amount'] + $adjustmentPerInstallment;
+
+                $stmt = $this->db->prepare("
+                    UPDATE loan_installments
+                    SET status = 'paid',
+                        paid_date = NOW(),
+                        amount_paid = :amount_paid,
+                        adjustment_amount = :adjustment_amount,
+                        adjustment_reason = :adjustment_reason,
+                        paid_by = :paid_by,
+                        updated_at = NOW()
+                    WHERE id = :id
+                ");
+                $stmt->execute([
+                    'id' => $installment['id'],
+                    'amount_paid' => $amountPaid,
+                    'adjustment_amount' => $adjustmentPerInstallment,
+                    'adjustment_reason' => $adjustmentReason,
+                    'paid_by' => $paymentMethod
+                ]);
+
+                // Registrar transação na carteira para cada parcela
+                $stmt = $this->db->prepare("
+                    INSERT INTO wallet_transactions (wallet_id, type, amount, description, reference_type, reference_id, created_at)
+                    VALUES (:wallet_id, 'loan_payment', :amount, :description, 'installment', :installment_id, NOW())
+                ");
+                $stmt->execute([
+                    'wallet_id' => $walletId,
+                    'amount' => $amountPaid,
+                    'description' => "Quitação - Empréstimo #{$loanId} - Parcela {$installment['installment_number']}",
+                    'installment_id' => $installment['id']
+                ]);
+            }
+
+            // Adicionar valor total à carteira
+            $stmt = $this->db->prepare("
+                UPDATE wallets SET balance = balance + :amount, updated_at = NOW()
+                WHERE id = :id
+            ");
+            $stmt->execute([
+                'id' => $walletId,
+                'amount' => $finalAmount
+            ]);
+
+            // Marcar empréstimo como pago
+            $stmt = $this->db->prepare("
+                UPDATE loans SET status = 'paid', updated_at = NOW()
+                WHERE id = :id
+            ");
+            $stmt->execute(['id' => $loanId]);
+
+            $this->db->commit();
+            return ['success' => true];
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            error_log("Erro ao quitar empréstimo: " . $e->getMessage());
+            return ['success' => false, 'error' => 'Erro ao processar quitação'];
+        }
+    }
 }

@@ -36,8 +36,11 @@ require_once __DIR__ . '/../../shared/layout/header.php';
         <h1>Empréstimo #<?= $loan['id'] ?></h1>
         <p class="page-subtitle">Cliente: <?= htmlspecialchars($loan['client_name']) ?></p>
     </div>
-    <div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
         <?php if ($loan['status'] === 'active'): ?>
+            <a href="<?= BASE_URL ?>/loans/payoff?id=<?= $loan['id'] ?>" class="btn btn-primary">
+                💰 Quitar Empréstimo
+            </a>
             <span class="badge badge-info" style="font-size: 1rem; padding: 0.5rem 1rem;">Ativo</span>
         <?php elseif ($loan['status'] === 'paid'): ?>
             <span class="badge badge-success" style="font-size: 1rem; padding: 0.5rem 1rem;">Pago</span>

@@ -186,6 +186,16 @@ $router->post('/loans/pay', function() {
     require FEATURES_PATH . '/loans/payment-action.php';
 });
 
+$router->get('/loans/payoff', function() {
+    requireAuth();
+    require FEATURES_PATH . '/loans/payoff-view.php';
+});
+
+$router->post('/loans/payoff', function() {
+    requireAuth();
+    require FEATURES_PATH . '/loans/payoff-action.php';
+});
+
 $router->get('/loans/:id', function($id) {
     requireAuth();
     $_GET['id'] = $id;
