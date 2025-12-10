@@ -196,6 +196,11 @@ $router->post('/loans/payoff', function() {
     require FEATURES_PATH . '/loans/payoff-action.php';
 });
 
+$router->get('/loans/whatsapp', function() {
+    requireAuth();
+    require FEATURES_PATH . '/loans/whatsapp-action.php';
+});
+
 $router->get('/loans/:id', function($id) {
     requireAuth();
     $_GET['id'] = $id;
