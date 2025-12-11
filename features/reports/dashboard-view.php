@@ -25,7 +25,7 @@ $totalReceber = array_sum(array_map(function($l) {
 }, $loans));
 $lucroTotal = array_sum(array_column($loans, 'interest_amount'));
 
-// Parcelas próximas (próximos 7 dias)
+// Parcelas próximas (próximo 1 dia)
 $db = Database::getInstance()->getConnection();
 $stmt = $db->prepare("
     SELECT i.*, l.client_id, c.name as client_name, l.id as loan_id
@@ -33,7 +33,7 @@ $stmt = $db->prepare("
     INNER JOIN loans l ON i.loan_id = l.id
     INNER JOIN clients c ON l.client_id = c.id
     WHERE i.status = 'pending'
-      AND i.due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+      AND i.due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 1 DAY)
     ORDER BY i.due_date ASC
     LIMIT 5
 ");
@@ -136,11 +136,11 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 
     <div class="card">
         <div class="card-header">
-            <h2>📅 Próximos Vencimentos (7 dias)</h2>
+            <h2>📅 Próximos Vencimentos (1 dia)</h2>
         </div>
         <?php if (empty($upcomingInstallments)): ?>
             <div style="padding: 2rem; text-align: center; color: #95a5a6;">
-                Nenhuma parcela vencendo nos próximos 7 dias.
+                Nenhuma parcela vencendo no próximo dia.
             </div>
         <?php else: ?>
             <div class="table-responsive">
