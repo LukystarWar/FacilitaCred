@@ -100,38 +100,42 @@ require_once __DIR__ . '/../../shared/layout/header.php';
             <small>À vista: 20% | Parcelado: 15% a.m (ao mês, acumulativo)</small>
         </div>
 
-        <div class="form-group">
-            <label for="installment_value">Valor da Parcela (Opcional)</label>
-            <input type="number" id="installment_value" step="0.01" min="0" placeholder="Deixe em branco para calcular automaticamente" oninput="calculateFromInstallment()">
-            <small>Se preenchido, o sistema calculará os juros automaticamente baseado neste valor</small>
-        </div>
+        <div id="calculationFields" style="display: none;">
+            <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #10b981;">
+                <small style="color: #059669; font-weight: 500;">💡 Dica: Você pode editar o Valor Total ou Valor da Parcela para ajustar os juros automaticamente!</small>
+            </div>
 
-        <div id="loanSummary" style="display: none; background: #f8f9ff; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
-            <h3 style="margin-top: 0;">Resumo do Empréstimo</h3>
-            <div style="display: grid; gap: 0.75rem;">
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Valor do empréstimo:</span>
-                    <strong id="summary_amount">R$ 0,00</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Taxa de juros:</span>
-                    <strong id="summary_interest_rate">0%</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Valor dos juros:</span>
-                    <strong id="summary_interest_amount" style="color: #f59e0b;">R$ 0,00</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; padding-top: 0.75rem; border-top: 2px solid #ddd;">
-                    <span>Total a receber:</span>
-                    <strong id="summary_total" style="color: #10b981; font-size: 1.25rem;">R$ 0,00</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Valor de cada parcela:</span>
-                    <strong id="summary_installment">R$ 0,00</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Primeira parcela vence em:</span>
-                    <strong id="summary_first_due"></strong>
+            <div class="form-group">
+                <label for="total_amount">Valor Total a Receber *</label>
+                <input type="number" id="total_amount" step="0.01" min="0" placeholder="0,00" oninput="calculateFromTotal()">
+                <small>Total = Valor do empréstimo + Juros. Edite para definir um valor total personalizado.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="installment_value">Valor de Cada Parcela *</label>
+                <input type="number" id="installment_value" step="0.01" min="0" placeholder="0,00" oninput="calculateFromInstallment()">
+                <small>Edite para definir um valor de parcela personalizado. O total será recalculado automaticamente.</small>
+            </div>
+
+            <div style="background: #f8f9ff; padding: 1.5rem; border-radius: 8px; margin-top: 1rem;">
+                <h3 style="margin-top: 0; font-size: 1rem; color: #6b7280;">📊 Resumo Calculado</h3>
+                <div style="display: grid; gap: 0.5rem; font-size: 0.875rem;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Valor do empréstimo:</span>
+                        <strong id="summary_amount">R$ 0,00</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Taxa de juros calculada:</span>
+                        <strong id="summary_interest_rate" style="color: #6366f1;">0%</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Valor dos juros:</span>
+                        <strong id="summary_interest_amount" style="color: #f59e0b;">R$ 0,00</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; border-top: 1px solid #e5e7eb;">
+                        <span>Primeira parcela vence em:</span>
+                        <strong id="summary_first_due">-</strong>
+                    </div>
                 </div>
             </div>
         </div>
@@ -241,18 +245,56 @@ document.addEventListener('click', function(e) {
 });
 
 // Loan calculation functions
+let calculationSource = 'amount'; // 'amount', 'total', or 'installment'
+
 function calculateLoan() {
-    if (isCalculatingFromInstallment) return;
+    if (calculationSource !== 'amount') return;
 
     const amount = parseFloat(document.getElementById('amount').value) || 0;
     const installmentsCount = parseInt(document.getElementById('installments_count').value) || 1;
 
-    // Clear installment value field when calculating normally
-    document.getElementById('installment_value').value = '';
-
     if (amount <= 0) {
-        document.getElementById('loanSummary').style.display = 'none';
+        document.getElementById('calculationFields').style.display = 'none';
         document.getElementById('submitBtn').disabled = true;
+        return;
+    }
+
+    document.getElementById('calculationFields').style.display = 'block';
+
+    const walletSelect = document.getElementById('wallet_id');
+    const selectedWallet = walletSelect.options[walletSelect.selectedIndex];
+    const walletBalance = parseFloat(selectedWallet.getAttribute('data-balance')) || 0;
+
+    if (amount > walletBalance) {
+        document.getElementById('walletWarning').style.display = 'block';
+        document.getElementById('submitBtn').disabled = true;
+    } else {
+        document.getElementById('walletWarning').style.display = 'none';
+    }
+
+    // Calculate using standard interest rate
+    const interestRate = installmentsCount === 1 ? 20 : installmentsCount * 15;
+    const interestAmount = (amount * interestRate) / 100;
+    const totalAmount = amount + interestAmount;
+    const installmentAmount = totalAmount / installmentsCount;
+
+    // Update fields
+    document.getElementById('total_amount').value = totalAmount.toFixed(2);
+    document.getElementById('installment_value').value = installmentAmount.toFixed(2);
+
+    updateSummary(amount, interestRate, interestAmount, totalAmount, installmentAmount);
+}
+
+function calculateFromTotal() {
+    calculationSource = 'total';
+
+    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    const totalAmount = parseFloat(document.getElementById('total_amount').value) || 0;
+    const installmentsCount = parseInt(document.getElementById('installments_count').value) || 1;
+
+    if (totalAmount <= 0 || amount <= 0) {
+        calculationSource = 'amount';
+        calculateLoan();
         return;
     }
 
@@ -267,25 +309,31 @@ function calculateLoan() {
         document.getElementById('walletWarning').style.display = 'none';
     }
 
-    const interestRate = installmentsCount === 1 ? 20 : installmentsCount * 15;
-    const interestAmount = (amount * interestRate) / 100;
-    const totalAmount = amount + interestAmount;
+    // Calculate interest and installment from total
+    const interestAmount = totalAmount - amount;
+    const interestRate = (interestAmount / amount) * 100;
     const installmentAmount = totalAmount / installmentsCount;
 
+    // Update installment field
+    document.getElementById('installment_value').value = installmentAmount.toFixed(2);
+
     updateSummary(amount, interestRate, interestAmount, totalAmount, installmentAmount);
+
+    setTimeout(() => { calculationSource = 'total'; }, 100);
 }
 
 function calculateFromInstallment() {
-    const installmentValue = parseFloat(document.getElementById('installment_value').value) || 0;
+    calculationSource = 'installment';
+
     const amount = parseFloat(document.getElementById('amount').value) || 0;
+    const installmentValue = parseFloat(document.getElementById('installment_value').value) || 0;
     const installmentsCount = parseInt(document.getElementById('installments_count').value) || 1;
 
     if (installmentValue <= 0 || amount <= 0) {
+        calculationSource = 'amount';
         calculateLoan();
         return;
     }
-
-    isCalculatingFromInstallment = true;
 
     const walletSelect = document.getElementById('wallet_id');
     const selectedWallet = walletSelect.options[walletSelect.selectedIndex];
@@ -303,23 +351,22 @@ function calculateFromInstallment() {
     const interestAmount = totalAmount - amount;
     const interestRate = (interestAmount / amount) * 100;
 
+    // Update total field
+    document.getElementById('total_amount').value = totalAmount.toFixed(2);
+
     updateSummary(amount, interestRate, interestAmount, totalAmount, installmentValue);
 
-    isCalculatingFromInstallment = false;
+    setTimeout(() => { calculationSource = 'installment'; }, 100);
 }
 
 function updateSummary(amount, interestRate, interestAmount, totalAmount, installmentAmount) {
     document.getElementById('summary_amount').textContent = formatMoney(amount);
     document.getElementById('summary_interest_rate').textContent = interestRate.toFixed(2) + '%';
     document.getElementById('summary_interest_amount').textContent = formatMoney(interestAmount);
-    document.getElementById('summary_total').textContent = formatMoney(totalAmount);
-    document.getElementById('summary_installment').textContent = formatMoney(installmentAmount);
 
     const firstDue = new Date();
     firstDue.setMonth(firstDue.getMonth() + 1);
     document.getElementById('summary_first_due').textContent = firstDue.toLocaleDateString('pt-BR');
-
-    document.getElementById('loanSummary').style.display = 'block';
 
     const clientId = document.getElementById('client_id').value;
     const walletId = document.getElementById('wallet_id').value;
@@ -335,6 +382,7 @@ function updateSummary(amount, interestRate, interestAmount, totalAmount, instal
 }
 
 function updateWalletInfo() {
+    calculationSource = 'amount';
     calculateLoan();
 }
 
