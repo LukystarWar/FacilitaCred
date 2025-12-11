@@ -15,8 +15,13 @@ class ClientService {
 
             // Filtro por busca
             if (!empty($search)) {
-                $where[] = "(c.name LIKE :search OR c.cpf LIKE :search OR c.phone LIKE :search)";
+                // Remover caracteres especiais para busca em CPF e telefone
+                $searchClean = preg_replace('/[^0-9]/', '', $search);
+
+                // Busca por nome (accent-insensitive), CPF ou telefone
+                $where[] = "(c.name COLLATE utf8mb4_general_ci LIKE :search OR REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), '/', '') LIKE :search_clean OR REPLACE(REPLACE(REPLACE(REPLACE(c.phone, '(', ''), ')', ''), ' ', ''), '-', '') LIKE :search_clean)";
                 $params['search'] = '%' . $search . '%';
+                $params['search_clean'] = '%' . $searchClean . '%';
             }
 
             $whereClause = implode(" AND ", $where);
