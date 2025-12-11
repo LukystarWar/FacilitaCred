@@ -19,9 +19,16 @@ class ClientService {
                 $searchClean = preg_replace('/[^0-9]/', '', $search);
 
                 // Busca por nome (accent-insensitive), CPF ou telefone
-                $where[] = "(c.name COLLATE utf8mb4_general_ci LIKE :search OR REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), '/', '') LIKE :search_clean OR REPLACE(REPLACE(REPLACE(REPLACE(c.phone, '(', ''), ')', ''), ' ', ''), '-', '') LIKE :search_clean)";
-                $params['search'] = '%' . $search . '%';
-                $params['search_clean'] = '%' . $searchClean . '%';
+                if (!empty($searchClean)) {
+                    // Tem números: buscar em nome, CPF e telefone
+                    $where[] = "(c.name COLLATE utf8mb4_general_ci LIKE :search OR REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), '/', '') LIKE :search_clean OR REPLACE(REPLACE(REPLACE(REPLACE(c.phone, '(', ''), ')', ''), ' ', ''), '-', '') LIKE :search_clean)";
+                    $params['search'] = '%' . $search . '%';
+                    $params['search_clean'] = '%' . $searchClean . '%';
+                } else {
+                    // Só letras: buscar apenas no nome
+                    $where[] = "c.name COLLATE utf8mb4_general_ci LIKE :search";
+                    $params['search'] = '%' . $search . '%';
+                }
             }
 
             $whereClause = implode(" AND ", $where);
@@ -90,9 +97,16 @@ class ClientService {
                 // Remover caracteres especiais para busca em CPF e telefone
                 $searchClean = preg_replace('/[^0-9]/', '', $search);
 
-                $where[] = "(c.name COLLATE utf8mb4_general_ci LIKE :search OR REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), '/', '') LIKE :search_clean OR REPLACE(REPLACE(REPLACE(REPLACE(c.phone, '(', ''), ')', ''), ' ', ''), '-', '') LIKE :search_clean)";
-                $params['search'] = '%' . $search . '%';
-                $params['search_clean'] = '%' . $searchClean . '%';
+                if (!empty($searchClean)) {
+                    // Tem números: buscar em nome, CPF e telefone
+                    $where[] = "(c.name COLLATE utf8mb4_general_ci LIKE :search OR REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), '/', '') LIKE :search_clean OR REPLACE(REPLACE(REPLACE(REPLACE(c.phone, '(', ''), ')', ''), ' ', ''), '-', '') LIKE :search_clean)";
+                    $params['search'] = '%' . $search . '%';
+                    $params['search_clean'] = '%' . $searchClean . '%';
+                } else {
+                    // Só letras: buscar apenas no nome
+                    $where[] = "c.name COLLATE utf8mb4_general_ci LIKE :search";
+                    $params['search'] = '%' . $search . '%';
+                }
             }
 
             $whereClause = implode(" AND ", $where);
@@ -107,12 +121,7 @@ class ClientService {
                 WHERE $whereClause
             ");
 
-            // Bind params
-            foreach ($params as $key => $value) {
-                $stmt->bindValue(":$key", $value);
-            }
-
-            $stmt->execute();
+            $stmt->execute($params);
             return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Erro ao buscar estatísticas de clientes: " . $e->getMessage());
