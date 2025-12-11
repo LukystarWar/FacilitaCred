@@ -107,13 +107,13 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 
             <div class="form-group">
                 <label for="total_amount">Valor Total a Receber *</label>
-                <input type="number" id="total_amount" step="0.01" min="0" placeholder="0,00" oninput="calculateFromTotal()">
+                <input type="number" id="total_amount" name="total_amount" step="0.01" min="0" placeholder="0,00" oninput="calculateFromTotal()">
                 <small>Total = Valor do empréstimo + Juros. Edite para definir um valor total personalizado.</small>
             </div>
 
             <div class="form-group">
                 <label for="installment_value">Valor de Cada Parcela *</label>
-                <input type="number" id="installment_value" step="0.01" min="0" placeholder="0,00" oninput="calculateFromInstallment()">
+                <input type="number" id="installment_value" name="installment_value" step="0.01" min="0" placeholder="0,00" oninput="calculateFromInstallment()">
                 <small>Edite para definir um valor de parcela personalizado. O total será recalculado automaticamente.</small>
             </div>
         </div>
