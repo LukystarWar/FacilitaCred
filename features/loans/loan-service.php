@@ -141,7 +141,7 @@ class LoanService {
         }
     }
 
-    public function createLoan($userId, $clientId, $walletId, $amount, $installmentsCount) {
+    public function createLoan($userId, $clientId, $walletId, $amount, $installmentsCount, $totalAmount = null, $installmentAmount = null) {
         try {
             $this->db->beginTransaction();
 
@@ -155,16 +155,33 @@ class LoanService {
                 return ['success' => false, 'error' => 'Saldo insuficiente na carteira'];
             }
 
-            // Calcular juros
-            if ($installmentsCount == 1) {
-                $interestRate = 20; // 20% à vista
-            } else {
-                $interestRate = $installmentsCount * 15; // 15% ao mês
-            }
+            // Se totalAmount ou installmentAmount foram fornecidos, usar esses valores
+            // Caso contrário, calcular usando a taxa padrão
+            if ($totalAmount !== null && $totalAmount > 0) {
+                // Usar o total fornecido
+                $interestAmount = $totalAmount - $amount;
+                $interestRate = ($interestAmount / $amount) * 100;
 
-            $interestAmount = ($amount * $interestRate) / 100;
-            $totalAmount = $amount + $interestAmount;
-            $installmentAmount = $totalAmount / $installmentsCount;
+                if ($installmentAmount === null || $installmentAmount <= 0) {
+                    $installmentAmount = $totalAmount / $installmentsCount;
+                }
+            } elseif ($installmentAmount !== null && $installmentAmount > 0) {
+                // Calcular do valor da parcela
+                $totalAmount = $installmentAmount * $installmentsCount;
+                $interestAmount = $totalAmount - $amount;
+                $interestRate = ($interestAmount / $amount) * 100;
+            } else {
+                // Calcular usando taxa padrão
+                if ($installmentsCount == 1) {
+                    $interestRate = 20; // 20% à vista
+                } else {
+                    $interestRate = $installmentsCount * 15; // 15% ao mês
+                }
+
+                $interestAmount = ($amount * $interestRate) / 100;
+                $totalAmount = $amount + $interestAmount;
+                $installmentAmount = $totalAmount / $installmentsCount;
+            }
 
             // Criar empréstimo
             $stmt = $this->db->prepare("

@@ -116,28 +116,6 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                 <input type="number" id="installment_value" step="0.01" min="0" placeholder="0,00" oninput="calculateFromInstallment()">
                 <small>Edite para definir um valor de parcela personalizado. O total será recalculado automaticamente.</small>
             </div>
-
-            <div style="background: #f8f9ff; padding: 1.5rem; border-radius: 8px; margin-top: 1rem;">
-                <h3 style="margin-top: 0; font-size: 1rem; color: #6b7280;">📊 Resumo Calculado</h3>
-                <div style="display: grid; gap: 0.5rem; font-size: 0.875rem;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Valor do empréstimo:</span>
-                        <strong id="summary_amount">R$ 0,00</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Taxa de juros calculada:</span>
-                        <strong id="summary_interest_rate" style="color: #6366f1;">0%</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Valor dos juros:</span>
-                        <strong id="summary_interest_amount" style="color: #f59e0b;">R$ 0,00</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; border-top: 1px solid #e5e7eb;">
-                        <span>Primeira parcela vence em:</span>
-                        <strong id="summary_first_due">-</strong>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <div class="modal-footer" style="border-top: none; padding: 0; margin-top: 2rem;">
@@ -360,21 +338,13 @@ function calculateFromInstallment() {
 }
 
 function updateSummary(amount, interestRate, interestAmount, totalAmount, installmentAmount) {
-    document.getElementById('summary_amount').textContent = formatMoney(amount);
-    document.getElementById('summary_interest_rate').textContent = interestRate.toFixed(2) + '%';
-    document.getElementById('summary_interest_amount').textContent = formatMoney(interestAmount);
-
-    const firstDue = new Date();
-    firstDue.setMonth(firstDue.getMonth() + 1);
-    document.getElementById('summary_first_due').textContent = firstDue.toLocaleDateString('pt-BR');
-
     const clientId = document.getElementById('client_id').value;
     const walletId = document.getElementById('wallet_id').value;
     const walletSelect = document.getElementById('wallet_id');
     const selectedWallet = walletSelect.options[walletSelect.selectedIndex];
     const walletBalance = parseFloat(selectedWallet.getAttribute('data-balance')) || 0;
 
-    if (clientId && walletId && amount > 0 && amount <= walletBalance) {
+    if (clientId && walletId && amount > 0 && amount <= walletBalance && totalAmount > 0 && installmentAmount > 0) {
         document.getElementById('submitBtn').disabled = false;
     } else {
         document.getElementById('submitBtn').disabled = true;

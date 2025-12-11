@@ -17,6 +17,8 @@ $clientId = intval($_POST['client_id'] ?? 0);
 $walletId = intval($_POST['wallet_id'] ?? 0);
 $amount = floatval($_POST['amount'] ?? 0);
 $installmentsCount = intval($_POST['installments_count'] ?? 1);
+$totalAmount = floatval($_POST['total_amount'] ?? 0);
+$installmentValue = floatval($_POST['installment_value'] ?? 0);
 
 if ($clientId <= 0) {
     Session::setFlash('error', 'Selecione um cliente');
@@ -42,7 +44,19 @@ if ($installmentsCount < 1 || $installmentsCount > 12) {
     exit;
 }
 
-$result = $loanService->createLoan($userId, $clientId, $walletId, $amount, $installmentsCount);
+if ($totalAmount <= 0) {
+    Session::setFlash('error', 'O valor total deve ser maior que zero');
+    header('Location: ' . BASE_URL . '/loans/create');
+    exit;
+}
+
+if ($installmentValue <= 0) {
+    Session::setFlash('error', 'O valor da parcela deve ser maior que zero');
+    header('Location: ' . BASE_URL . '/loans/create');
+    exit;
+}
+
+$result = $loanService->createLoan($userId, $clientId, $walletId, $amount, $installmentsCount, $totalAmount, $installmentValue);
 
 if ($result['success']) {
     Session::setFlash('success', 'Empréstimo criado com sucesso!');
