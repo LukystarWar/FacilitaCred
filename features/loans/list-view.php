@@ -32,7 +32,8 @@ $pagination = $result['pagination'];
 // Buscar clientes e carteiras para os filtros
 $clientService = new ClientService();
 $walletService = new WalletService();
-$clients = $clientService->getAllClients(Session::get('user_id'));
+$clientsResult = $clientService->getAllClients(Session::get('user_id'), '', 1, 1000);
+$clients = $clientsResult['data'];
 $wallets = $walletService->getAllWallets(Session::get('user_id'));
 
 $pageTitle = 'Empréstimos';
