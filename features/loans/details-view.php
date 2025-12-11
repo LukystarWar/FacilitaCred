@@ -206,13 +206,9 @@ $overdueCount = count(array_filter($installments, fn($i) => $i['status'] === 'ov
                         <td class="text-center">
                             <?php if ($installment['status'] !== 'paid'): ?>
                                 <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                                    <form method="POST" action="<?= BASE_URL ?>/loans/pay" style="display: inline;" onsubmit="return confirm('Confirma o pagamento desta parcela?')">
-                                        <input type="hidden" name="installment_id" value="<?= $installment['id'] ?>">
-                                        <input type="hidden" name="loan_id" value="<?= $loan['id'] ?>">
-                                        <button type="submit" class="btn btn-sm btn-success">
-                                            ✓ Pagar
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-sm btn-success" onclick="openPaymentModal(<?= $installment['id'] ?>, <?= $loan['id'] ?>, <?= $installment['amount'] ?>, <?= $installment['installment_number'] ?>, '<?= $installment['status'] ?>')">
+                                        ✓ Pagar
+                                    </button>
                                     <?php
                                     // Preparar dados para WhatsApp
                                     $whatsappData = [
@@ -270,6 +266,188 @@ $overdueCount = count(array_filter($installments, fn($i) => $i['status'] === 'ov
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 1.5rem;
 }
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
 </style>
+
+<!-- Modal de Pagamento -->
+<div id="paymentModal" class="modal-overlay" onclick="if(event.target === this) closePaymentModal()">
+    <div class="modal-content">
+        <h2 style="margin-bottom: 1.5rem;">Registrar Pagamento</h2>
+
+        <form method="POST" action="<?= BASE_URL ?>/loans/pay" id="paymentForm">
+            <input type="hidden" name="installment_id" id="modal_installment_id">
+            <input type="hidden" name="loan_id" id="modal_loan_id">
+            <input type="hidden" name="adjustment_amount" id="modal_adjustment_amount" value="0">
+
+            <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f3f4f6; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span>Parcela:</span>
+                    <strong id="modal_installment_info"></strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span>Valor Original:</span>
+                    <strong id="modal_original_amount"></strong>
+                </div>
+                <div id="modal_late_fee_info" style="display: none; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #d1d5db;"></div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label">Tipo de Ajuste</label>
+                <select id="adjustment_type" class="form-control" onchange="toggleAdjustment()">
+                    <option value="none">Sem ajuste</option>
+                    <option value="discount">Desconto</option>
+                    <option value="addition">Acréscimo</option>
+                    <option value="late_fee">Usar Multa Calculada</option>
+                </select>
+            </div>
+
+            <div id="adjustment_input_group" style="display: none; margin-bottom: 1rem;">
+                <label class="form-label">Valor do Ajuste (R$)</label>
+                <input type="number" id="adjustment_value" class="form-control" step="0.01" min="0" value="0" oninput="calculateTotal()">
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label">Motivo do Ajuste (opcional)</label>
+                <input type="text" name="adjustment_reason" id="adjustment_reason" class="form-control" placeholder="Ex: Desconto por pagamento antecipado">
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label">Forma de Pagamento *</label>
+                <select name="payment_method" class="form-control" required>
+                    <option value="">Selecione...</option>
+                    <option value="Dinheiro">Dinheiro</option>
+                    <option value="PIX">PIX</option>
+                    <option value="Transferência">Transferência</option>
+                    <option value="Cartão de Débito">Cartão de Débito</option>
+                    <option value="Cartão de Crédito">Cartão de Crédito</option>
+                </select>
+            </div>
+
+            <div style="padding: 1rem; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 600;">Valor Total a Receber:</span>
+                    <span id="final_amount" style="font-size: 1.5rem; font-weight: 700; color: #059669;">R$ 0,00</span>
+                </div>
+                <div id="adjustment_info" style="margin-top: 0.5rem; font-size: 0.875rem; color: #6b7280; display: none;"></div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closePaymentModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Confirmar Pagamento</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let currentInstallment = {};
+
+function openPaymentModal(installmentId, loanId, amount, installmentNumber, status) {
+    currentInstallment = { installmentId, loanId, amount, installmentNumber, status };
+
+    document.getElementById('modal_installment_id').value = installmentId;
+    document.getElementById('modal_loan_id').value = loanId;
+    document.getElementById('modal_installment_info').textContent = '#' + installmentNumber;
+    document.getElementById('modal_original_amount').textContent = 'R$ ' + amount.toFixed(2).replace('.', ',');
+
+    // Calcular multa se atrasada
+    if (status === 'overdue') {
+        // Aqui você pode fazer uma chamada AJAX para calcular a multa ou passar via data-attribute
+        document.getElementById('adjustment_type').querySelector('option[value="late_fee"]').style.display = 'block';
+    } else {
+        document.getElementById('adjustment_type').querySelector('option[value="late_fee"]').style.display = 'none';
+    }
+
+    document.getElementById('adjustment_type').value = 'none';
+    document.getElementById('adjustment_value').value = '0';
+    document.getElementById('adjustment_reason').value = '';
+    toggleAdjustment();
+    calculateTotal();
+
+    document.getElementById('paymentModal').classList.add('active');
+}
+
+function closePaymentModal() {
+    document.getElementById('paymentModal').classList.remove('active');
+}
+
+function toggleAdjustment() {
+    const type = document.getElementById('adjustment_type').value;
+    const inputGroup = document.getElementById('adjustment_input_group');
+    const adjustmentValue = document.getElementById('adjustment_value');
+
+    if (type === 'none') {
+        inputGroup.style.display = 'none';
+        adjustmentValue.value = '0';
+    } else if (type === 'late_fee') {
+        inputGroup.style.display = 'none';
+        // Aqui você pode calcular a multa baseado nas configurações
+        // Por simplicidade, vamos usar um valor exemplo
+        adjustmentValue.value = '0';
+    } else {
+        inputGroup.style.display = 'block';
+        adjustmentValue.value = '0';
+    }
+
+    calculateTotal();
+}
+
+function calculateTotal() {
+    const type = document.getElementById('adjustment_type').value;
+    const adjustmentValue = parseFloat(document.getElementById('adjustment_value').value) || 0;
+    const originalAmount = currentInstallment.amount;
+
+    let finalAmount = originalAmount;
+    let adjustmentAmount = 0;
+    let adjustmentText = '';
+
+    if (type === 'discount') {
+        adjustmentAmount = -adjustmentValue;
+        finalAmount = originalAmount - adjustmentValue;
+        adjustmentText = `Desconto de R$ ${adjustmentValue.toFixed(2).replace('.', ',')}`;
+    } else if (type === 'addition') {
+        adjustmentAmount = adjustmentValue;
+        finalAmount = originalAmount + adjustmentValue;
+        adjustmentText = `Acréscimo de R$ ${adjustmentValue.toFixed(2).replace('.', ',')}`;
+    }
+
+    document.getElementById('modal_adjustment_amount').value = adjustmentAmount.toFixed(2);
+    document.getElementById('final_amount').textContent = 'R$ ' + finalAmount.toFixed(2).replace('.', ',');
+
+    const adjustmentInfo = document.getElementById('adjustment_info');
+    if (adjustmentText) {
+        adjustmentInfo.textContent = adjustmentText;
+        adjustmentInfo.style.display = 'block';
+    } else {
+        adjustmentInfo.style.display = 'none';
+    }
+}
+</script>
 
 <?php require_once __DIR__ . '/../../shared/layout/footer.php'; ?>
