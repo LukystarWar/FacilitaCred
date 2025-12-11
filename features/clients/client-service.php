@@ -32,12 +32,7 @@ class ClientService {
                 FROM clients c
                 WHERE $whereClause
             ");
-
-            // Bind params para count
-            foreach ($params as $key => $value) {
-                $countStmt->bindValue(":$key", $value);
-            }
-            $countStmt->execute();
+            $countStmt->execute($params);
             $totalRecords = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
 
             // Query principal com paginação
@@ -54,14 +49,10 @@ class ClientService {
                 LIMIT :limit OFFSET :offset
             ");
 
-            // Bind params para query principal
-            foreach ($params as $key => $value) {
-                $stmt->bindValue(":$key", $value);
-            }
-            $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
-            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $params['limit'] = $perPage;
+            $params['offset'] = $offset;
 
-            $stmt->execute();
+            $stmt->execute($params);
             $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             return [
@@ -75,6 +66,8 @@ class ClientService {
             ];
         } catch (PDOException $e) {
             error_log("Erro ao buscar clientes: " . $e->getMessage());
+            error_log("Search params: " . print_r($params, true));
+            error_log("Where clause: " . $whereClause);
             return [
                 'data' => [],
                 'pagination' => [
