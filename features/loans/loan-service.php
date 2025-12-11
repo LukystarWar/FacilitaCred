@@ -250,7 +250,7 @@ class LoanService {
         }
     }
 
-    public function payInstallment($installmentId, $userId) {
+    public function payInstallment($installmentId, $userId, $adjustmentAmount = 0, $adjustmentReason = '', $paymentMethod = 'Não especificado') {
         try {
             $this->db->beginTransaction();
 
@@ -274,15 +274,30 @@ class LoanService {
                 return ['success' => false, 'error' => 'Parcela já foi paga'];
             }
 
+            // Calcular valor final (com ajuste se houver)
+            $finalAmount = $installment['amount'] + $adjustmentAmount;
+
             // Marcar parcela como paga
             $stmt = $this->db->prepare("
                 UPDATE loan_installments
-                SET status = 'paid', paid_date = NOW(), updated_at = NOW()
+                SET status = 'paid',
+                    paid_date = NOW(),
+                    amount_paid = :amount_paid,
+                    adjustment_amount = :adjustment_amount,
+                    adjustment_reason = :adjustment_reason,
+                    paid_by = :paid_by,
+                    updated_at = NOW()
                 WHERE id = :id
             ");
-            $stmt->execute(['id' => $installmentId]);
+            $stmt->execute([
+                'id' => $installmentId,
+                'amount_paid' => $finalAmount,
+                'adjustment_amount' => $adjustmentAmount,
+                'adjustment_reason' => $adjustmentReason,
+                'paid_by' => $paymentMethod
+            ]);
 
-            // Creditar na carteira
+            // Creditar na carteira (valor final)
             $stmt = $this->db->prepare("
                 UPDATE wallets
                 SET balance = balance + :amount, updated_at = NOW()
@@ -290,7 +305,7 @@ class LoanService {
             ");
             $stmt->execute([
                 'wallet_id' => $installment['wallet_id'],
-                'amount' => $installment['amount']
+                'amount' => $finalAmount
             ]);
 
             // Registrar transação
@@ -298,10 +313,14 @@ class LoanService {
                 INSERT INTO wallet_transactions (wallet_id, type, amount, description, reference_type, reference_id, created_at)
                 VALUES (:wallet_id, 'loan_payment', :amount, :description, 'installment', :installment_id, NOW())
             ");
+            $description = "Pagamento parcela #{$installment['installment_number']} - Empréstimo #{$installment['loan_id']}";
+            if ($adjustmentAmount != 0) {
+                $description .= " (Ajuste: " . ($adjustmentAmount > 0 ? '+' : '') . "R$ " . number_format(abs($adjustmentAmount), 2, ',', '.') . ")";
+            }
             $stmt->execute([
                 'wallet_id' => $installment['wallet_id'],
-                'amount' => $installment['amount'],
-                'description' => "Pagamento parcela #{$installment['installment_number']} - Empréstimo #{$installment['loan_id']}",
+                'amount' => $finalAmount,
+                'description' => $description,
                 'installment_id' => $installmentId
             ]);
 

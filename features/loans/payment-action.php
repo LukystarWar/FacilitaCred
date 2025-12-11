@@ -15,6 +15,9 @@ $userId = Session::get('user_id');
 
 $installmentId = intval($_POST['installment_id'] ?? 0);
 $loanId = intval($_POST['loan_id'] ?? 0);
+$adjustmentAmount = floatval($_POST['adjustment_amount'] ?? 0);
+$adjustmentReason = trim($_POST['adjustment_reason'] ?? '');
+$paymentMethod = trim($_POST['payment_method'] ?? 'Não especificado');
 
 if ($installmentId <= 0) {
     Session::setFlash('error', 'Parcela inválida');
@@ -22,7 +25,7 @@ if ($installmentId <= 0) {
     exit;
 }
 
-$result = $loanService->payInstallment($installmentId, $userId);
+$result = $loanService->payInstallment($installmentId, $userId, $adjustmentAmount, $adjustmentReason, $paymentMethod);
 
 if ($result['success']) {
     Session::setFlash('success', 'Pagamento registrado com sucesso!');
