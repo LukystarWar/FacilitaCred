@@ -116,6 +116,12 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                 <input type="number" id="installment_value" name="installment_value" step="0.01" min="0" placeholder="0,00" oninput="calculateFromInstallment()">
                 <small>Edite para definir um valor de parcela personalizado. O total será recalculado automaticamente.</small>
             </div>
+
+            <div class="form-group">
+                <label for="first_due_date">Data de Vencimento da 1ª Parcela *</label>
+                <input type="date" id="first_due_date" name="first_due_date" required>
+                <small>As demais parcelas vencerão mensalmente após esta data.</small>
+            </div>
         </div>
 
         <div class="modal-footer" style="border-top: none; padding: 0; margin-top: 2rem;">
@@ -252,6 +258,13 @@ function calculateLoan() {
     // Update fields
     document.getElementById('total_amount').value = totalAmount.toFixed(2);
     document.getElementById('installment_value').value = installmentAmount.toFixed(2);
+
+    // Set default first due date to 30 days from now if not already set
+    if (!document.getElementById('first_due_date').value) {
+        const firstDue = new Date();
+        firstDue.setDate(firstDue.getDate() + 30);
+        document.getElementById('first_due_date').value = firstDue.toISOString().split('T')[0];
+    }
 
     // Validate wallet balance
     if (amount > walletBalance) {

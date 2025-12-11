@@ -141,7 +141,7 @@ class LoanService {
         }
     }
 
-    public function createLoan($userId, $clientId, $walletId, $amount, $installmentsCount, $totalAmount = null, $installmentAmount = null) {
+    public function createLoan($userId, $clientId, $walletId, $amount, $installmentsCount, $totalAmount = null, $installmentAmount = null, $firstDueDate = null) {
         try {
             $this->db->beginTransaction();
 
@@ -201,9 +201,15 @@ class LoanService {
             $loanId = $this->db->lastInsertId();
 
             // Criar parcelas
-            $dueDate = new DateTime();
+            // Usar a data fornecida ou +30 dias como padrão
+            if ($firstDueDate) {
+                $dueDate = new DateTime($firstDueDate);
+            } else {
+                $dueDate = new DateTime();
+                $dueDate->modify('+30 days');
+            }
+
             for ($i = 1; $i <= $installmentsCount; $i++) {
-                $dueDate->modify('+1 month');
                 $stmt = $this->db->prepare("
                     INSERT INTO loan_installments (loan_id, installment_number, amount, due_date, status, created_at)
                     VALUES (:loan_id, :installment_number, :amount, :due_date, 'pending', NOW())
@@ -214,6 +220,9 @@ class LoanService {
                     'amount' => $installmentAmount,
                     'due_date' => $dueDate->format('Y-m-d')
                 ]);
+
+                // Próxima parcela vence 1 mês depois
+                $dueDate->modify('+1 month');
             }
 
             // Debitar da carteira
