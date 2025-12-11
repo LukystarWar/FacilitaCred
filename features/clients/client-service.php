@@ -7,8 +7,30 @@ class ClientService {
         $this->db = Database::getInstance()->getConnection();
     }
 
-    public function getAllClients($userId) {
+    public function getAllClients($userId, $search = '', $page = 1, $perPage = 20) {
         try {
+            $offset = ($page - 1) * $perPage;
+            $where = ["c.is_active = 1"];
+            $params = [];
+
+            // Filtro por busca
+            if (!empty($search)) {
+                $where[] = "(c.name LIKE :search OR c.cpf LIKE :search OR c.phone LIKE :search)";
+                $params['search'] = '%' . $search . '%';
+            }
+
+            $whereClause = implode(" AND ", $where);
+
+            // Query para total de registros
+            $countStmt = $this->db->prepare("
+                SELECT COUNT(DISTINCT c.id) as total
+                FROM clients c
+                WHERE $whereClause
+            ");
+            $countStmt->execute($params);
+            $totalRecords = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+            // Query principal com paginação
             $stmt = $this->db->prepare("
                 SELECT
                     c.*,
@@ -16,15 +38,41 @@ class ClientService {
                     COALESCE(SUM(CASE WHEN l.status = 'active' THEN l.total_amount ELSE 0 END), 0) as active_debt
                 FROM clients c
                 LEFT JOIN loans l ON c.id = l.client_id
-                WHERE c.is_active = 1
+                WHERE $whereClause
                 GROUP BY c.id
                 ORDER BY c.created_at DESC
+                LIMIT :limit OFFSET :offset
             ");
+
+            foreach ($params as $key => $value) {
+                $stmt->bindValue(":$key", $value);
+            }
+            $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+
             $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return [
+                'data' => $clients,
+                'pagination' => [
+                    'total' => $totalRecords,
+                    'per_page' => $perPage,
+                    'current_page' => $page,
+                    'total_pages' => ceil($totalRecords / $perPage)
+                ]
+            ];
         } catch (PDOException $e) {
             error_log("Erro ao buscar clientes: " . $e->getMessage());
-            return [];
+            return [
+                'data' => [],
+                'pagination' => [
+                    'total' => 0,
+                    'per_page' => $perPage,
+                    'current_page' => 1,
+                    'total_pages' => 0
+                ]
+            ];
         }
     }
 
