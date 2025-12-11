@@ -16,6 +16,9 @@ $result = $clientService->getAllClients(Session::get('user_id'), $search, $page,
 $clients = $result['data'];
 $pagination = $result['pagination'];
 
+// Buscar estatísticas totais (não apenas da página)
+$stats = $clientService->getClientsStats(Session::get('user_id'), $search);
+
 $pageTitle = 'Clientes';
 require_once __DIR__ . '/../../shared/layout/header.php';
 ?>
@@ -42,16 +45,16 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 
 <div class="stats-grid" style="margin-bottom: 2rem;">
     <div class="stat-card" style="border-left: 4px solid #6b7280;">
-        <div class="stat-value" style="color: #1C1C1C;"><?= $pagination['total'] ?></div>
+        <div class="stat-value" style="color: #1C1C1C;"><?= $stats['total_clients'] ?></div>
         <div class="stat-label" style="color: #6b7280;">Total de Clientes</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #11C76F;">
-        <div class="stat-value" style="color: #1C1C1C;"><?= count(array_filter($clients, fn($c) => ($c['loan_count'] ?? 0) > 0)) ?></div>
-        <div class="stat-label" style="color: #6b7280;">Com Empréstimos (página)</div>
+        <div class="stat-value" style="color: #1C1C1C;"><?= $stats['clients_with_loans'] ?></div>
+        <div class="stat-label" style="color: #6b7280;">Com Empréstimos Ativos</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #EA580C;">
-        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format(array_sum(array_column($clients, 'active_debt')), 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Dívida Total Ativa (página)</div>
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($stats['total_active_debt'], 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Dívida Total Ativa</div>
     </div>
 </div>
 

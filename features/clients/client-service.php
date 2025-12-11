@@ -87,6 +87,50 @@ class ClientService {
         }
     }
 
+    public function getClientsStats($userId, $search = '') {
+        try {
+            $where = ["c.is_active = 1"];
+            $params = [];
+
+            // Filtro por busca
+            if (!empty($search)) {
+                // Remover caracteres especiais para busca em CPF e telefone
+                $searchClean = preg_replace('/[^0-9]/', '', $search);
+
+                $where[] = "(c.name COLLATE utf8mb4_general_ci LIKE :search OR REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), '/', '') LIKE :search_clean OR REPLACE(REPLACE(REPLACE(REPLACE(c.phone, '(', ''), ')', ''), ' ', ''), '-', '') LIKE :search_clean)";
+                $params['search'] = '%' . $search . '%';
+                $params['search_clean'] = '%' . $searchClean . '%';
+            }
+
+            $whereClause = implode(" AND ", $where);
+
+            $stmt = $this->db->prepare("
+                SELECT
+                    COUNT(DISTINCT c.id) as total_clients,
+                    COUNT(DISTINCT CASE WHEN l.id IS NOT NULL THEN c.id END) as clients_with_loans,
+                    COALESCE(SUM(CASE WHEN l.status = 'active' THEN l.total_amount ELSE 0 END), 0) as total_active_debt
+                FROM clients c
+                LEFT JOIN loans l ON c.id = l.client_id
+                WHERE $whereClause
+            ");
+
+            // Bind params
+            foreach ($params as $key => $value) {
+                $stmt->bindValue(":$key", $value);
+            }
+
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Erro ao buscar estatísticas de clientes: " . $e->getMessage());
+            return [
+                'total_clients' => 0,
+                'clients_with_loans' => 0,
+                'total_active_debt' => 0
+            ];
+        }
+    }
+
     public function getClientById($id, $userId) {
         try {
             $stmt = $this->db->prepare("
