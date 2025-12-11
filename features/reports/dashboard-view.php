@@ -12,7 +12,8 @@ $loanService = new LoanService();
 
 $totalCarteiras = $walletService->getTotalBalance($userId);
 $wallets = $walletService->getAllWallets($userId);
-$loans = $loanService->getAllLoans($userId);
+$loansResult = $loanService->getAllLoans($userId, [], 1, 1000); // Pegar todos os empréstimos sem paginação
+$loans = $loansResult['data'];
 
 $totalEmprestado = array_sum(array_column($loans, 'amount'));
 $totalReceber = array_sum(array_map(function($l) {
