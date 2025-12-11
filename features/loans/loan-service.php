@@ -15,8 +15,13 @@ class LoanService {
 
             // Filtro por status
             if (!empty($filters['status'])) {
-                $where[] = "l.status = :status";
-                $params['status'] = $filters['status'];
+                if ($filters['status'] === 'overdue') {
+                    // Empréstimos ativos com parcelas atrasadas
+                    $where[] = "l.status = 'active' AND EXISTS (SELECT 1 FROM loan_installments WHERE loan_id = l.id AND status = 'overdue')";
+                } else {
+                    $where[] = "l.status = :status";
+                    $params['status'] = $filters['status'];
+                }
             }
 
             // Filtro por cliente

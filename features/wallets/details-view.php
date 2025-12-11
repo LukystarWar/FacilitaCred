@@ -173,23 +173,23 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 }
 
 .badge-success {
-    background: #d4edda;
-    color: #155724;
+    background: #28a745;
+    color: white;
 }
 
 .badge-danger {
-    background: #f8d7da;
-    color: #721c24;
+    background: #dc3545;
+    color: white;
 }
 
 .badge-warning {
-    background: #fff3cd;
-    color: #856404;
+    background: #ffc107;
+    color: #212529;
 }
 
 .badge-info {
-    background: #d1ecf1;
-    color: #0c5460;
+    background: #17a2b8;
+    color: white;
 }
 </style>
 

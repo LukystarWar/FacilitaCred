@@ -63,6 +63,7 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                 <select name="status" class="form-control">
                     <option value="">Todos</option>
                     <option value="active" <?= $filters['status'] === 'active' ? 'selected' : '' ?>>Ativos</option>
+                    <option value="overdue" <?= $filters['status'] === 'overdue' ? 'selected' : '' ?>>Atrasados</option>
                     <option value="paid" <?= $filters['status'] === 'paid' ? 'selected' : '' ?>>Pagos</option>
                 </select>
             </div>
@@ -201,9 +202,16 @@ $ativos = count(array_filter($loans, fn($l) => $l['status'] === 'active'));
                                 <?php endif; ?>
                             </td>
                             <td class="text-center">
-                                <a href="<?= BASE_URL ?>/loans/<?= $loan['id'] ?>" class="btn btn-sm btn-outline">
-                                    Ver Detalhes
-                                </a>
+                                <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                                    <a href="<?= BASE_URL ?>/loans/<?= $loan['id'] ?>" title="Ver detalhes">
+                                        <img src="<?= ASSETS_URL ?>/images/ver.png" alt="Ver" style="width: 20px; height: 20px; cursor: pointer;">
+                                    </a>
+                                    <?php if ($loan['status'] === 'active'): ?>
+                                        <a href="<?= BASE_URL ?>/loans/whatsapp?loan_id=<?= $loan['id'] ?>&template=<?= $loan['overdue_installments'] > 0 ? 'cobranca' : 'lembrete' ?>" title="Enviar WhatsApp">
+                                            <img src="<?= ASSETS_URL ?>/images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; cursor: pointer;">
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
