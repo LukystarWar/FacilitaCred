@@ -243,13 +243,6 @@ function calculateLoan() {
     const selectedWallet = walletSelect.options[walletSelect.selectedIndex];
     const walletBalance = parseFloat(selectedWallet.getAttribute('data-balance')) || 0;
 
-    if (amount > walletBalance) {
-        document.getElementById('walletWarning').style.display = 'block';
-        document.getElementById('submitBtn').disabled = true;
-    } else {
-        document.getElementById('walletWarning').style.display = 'none';
-    }
-
     // Calculate using standard interest rate
     const interestRate = installmentsCount === 1 ? 20 : installmentsCount * 15;
     const interestAmount = (amount * interestRate) / 100;
@@ -259,6 +252,13 @@ function calculateLoan() {
     // Update fields
     document.getElementById('total_amount').value = totalAmount.toFixed(2);
     document.getElementById('installment_value').value = installmentAmount.toFixed(2);
+
+    // Validate wallet balance
+    if (amount > walletBalance) {
+        document.getElementById('walletWarning').style.display = 'block';
+    } else {
+        document.getElementById('walletWarning').style.display = 'none';
+    }
 
     updateSummary(amount, interestRate, interestAmount, totalAmount, installmentAmount);
 }
@@ -276,17 +276,6 @@ function calculateFromTotal() {
         return;
     }
 
-    const walletSelect = document.getElementById('wallet_id');
-    const selectedWallet = walletSelect.options[walletSelect.selectedIndex];
-    const walletBalance = parseFloat(selectedWallet.getAttribute('data-balance')) || 0;
-
-    if (amount > walletBalance) {
-        document.getElementById('walletWarning').style.display = 'block';
-        document.getElementById('submitBtn').disabled = true;
-    } else {
-        document.getElementById('walletWarning').style.display = 'none';
-    }
-
     // Calculate interest and installment from total
     const interestAmount = totalAmount - amount;
     const interestRate = (interestAmount / amount) * 100;
@@ -294,6 +283,17 @@ function calculateFromTotal() {
 
     // Update installment field
     document.getElementById('installment_value').value = installmentAmount.toFixed(2);
+
+    // Validate wallet balance
+    const walletSelect = document.getElementById('wallet_id');
+    const selectedWallet = walletSelect.options[walletSelect.selectedIndex];
+    const walletBalance = parseFloat(selectedWallet.getAttribute('data-balance')) || 0;
+
+    if (amount > walletBalance) {
+        document.getElementById('walletWarning').style.display = 'block';
+    } else {
+        document.getElementById('walletWarning').style.display = 'none';
+    }
 
     updateSummary(amount, interestRate, interestAmount, totalAmount, installmentAmount);
 
@@ -313,17 +313,6 @@ function calculateFromInstallment() {
         return;
     }
 
-    const walletSelect = document.getElementById('wallet_id');
-    const selectedWallet = walletSelect.options[walletSelect.selectedIndex];
-    const walletBalance = parseFloat(selectedWallet.getAttribute('data-balance')) || 0;
-
-    if (amount > walletBalance) {
-        document.getElementById('walletWarning').style.display = 'block';
-        document.getElementById('submitBtn').disabled = true;
-    } else {
-        document.getElementById('walletWarning').style.display = 'none';
-    }
-
     // Calculate total and interest from installment value
     const totalAmount = installmentValue * installmentsCount;
     const interestAmount = totalAmount - amount;
@@ -331,6 +320,17 @@ function calculateFromInstallment() {
 
     // Update total field
     document.getElementById('total_amount').value = totalAmount.toFixed(2);
+
+    // Validate wallet balance
+    const walletSelect = document.getElementById('wallet_id');
+    const selectedWallet = walletSelect.options[walletSelect.selectedIndex];
+    const walletBalance = parseFloat(selectedWallet.getAttribute('data-balance')) || 0;
+
+    if (amount > walletBalance) {
+        document.getElementById('walletWarning').style.display = 'block';
+    } else {
+        document.getElementById('walletWarning').style.display = 'none';
+    }
 
     updateSummary(amount, interestRate, interestAmount, totalAmount, installmentValue);
 
@@ -340,10 +340,16 @@ function calculateFromInstallment() {
 function updateSummary(amount, interestRate, interestAmount, totalAmount, installmentAmount) {
     const clientId = document.getElementById('client_id').value;
     const walletId = document.getElementById('wallet_id').value;
-    const walletSelect = document.getElementById('wallet_id');
-    const selectedWallet = walletSelect.options[walletSelect.selectedIndex];
-    const walletBalance = parseFloat(selectedWallet.getAttribute('data-balance')) || 0;
 
+    // Get wallet balance
+    let walletBalance = 0;
+    if (walletId) {
+        const walletSelect = document.getElementById('wallet_id');
+        const selectedWallet = walletSelect.options[walletSelect.selectedIndex];
+        walletBalance = parseFloat(selectedWallet.getAttribute('data-balance')) || 0;
+    }
+
+    // Enable submit button if all conditions are met
     if (clientId && walletId && amount > 0 && amount <= walletBalance && totalAmount > 0 && installmentAmount > 0) {
         document.getElementById('submitBtn').disabled = false;
     } else {
