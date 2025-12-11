@@ -27,7 +27,12 @@ class ClientService {
                 FROM clients c
                 WHERE $whereClause
             ");
-            $countStmt->execute($params);
+
+            // Bind params para count
+            foreach ($params as $key => $value) {
+                $countStmt->bindValue(":$key", $value);
+            }
+            $countStmt->execute();
             $totalRecords = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
 
             // Query principal com paginação
@@ -44,6 +49,7 @@ class ClientService {
                 LIMIT :limit OFFSET :offset
             ");
 
+            // Bind params para query principal
             foreach ($params as $key => $value) {
                 $stmt->bindValue(":$key", $value);
             }
