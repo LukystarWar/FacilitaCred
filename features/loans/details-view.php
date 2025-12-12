@@ -206,7 +206,22 @@ $overdueCount = count(array_filter($installments, fn($i) => $i['status'] === 'ov
                         <td class="text-center">
                             <?php if ($installment['status'] !== 'paid'): ?>
                                 <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                                    <button type="button" class="btn btn-sm btn-success" onclick="openPaymentModal(<?= $installment['id'] ?>, <?= $loan['id'] ?>, <?= $installment['amount'] ?>, <?= $installment['installment_number'] ?>, '<?= $installment['status'] ?>')">
+                                    <?php
+                                    // Calcular multa para passar ao modal
+                                    $modalLateFee = 0;
+                                    $modalTotalAmount = $installment['amount'];
+                                    $modalDaysLate = 0;
+                                    $modalInGrace = false;
+                                    if ($installment['status'] === 'overdue') {
+                                        $lateFeeData = $loanService->calculateLateFee($installment['amount'], $installment['due_date']);
+                                        $modalLateFee = $lateFeeData['late_fee_amount'];
+                                        $modalTotalAmount = $lateFeeData['total_amount'];
+                                        $modalDaysLate = $lateFeeData['days_late'];
+                                        $modalInGrace = $lateFeeData['in_grace_period'];
+                                    }
+                                    ?>
+                                    <button type="button" class="btn btn-sm btn-success"
+                                        onclick="openPaymentModal(<?= $installment['id'] ?>, <?= $loan['id'] ?>, <?= $installment['amount'] ?>, <?= $installment['installment_number'] ?>, '<?= $installment['status'] ?>', <?= $modalLateFee ?>, <?= $modalTotalAmount ?>, <?= $modalDaysLate ?>, <?= $modalInGrace ? 'true' : 'false' ?>)">
                                         ✓ Pagar
                                     </button>
                                     <?php
@@ -369,20 +384,47 @@ $overdueCount = count(array_filter($installments, fn($i) => $i['status'] === 'ov
 <script>
 let currentInstallment = {};
 
-function openPaymentModal(installmentId, loanId, amount, installmentNumber, status) {
-    currentInstallment = { installmentId, loanId, amount, installmentNumber, status };
+function openPaymentModal(installmentId, loanId, amount, installmentNumber, status, lateFee = 0, totalAmount = 0, daysLate = 0, inGrace = false) {
+    currentInstallment = {
+        installmentId,
+        loanId,
+        amount,
+        installmentNumber,
+        status,
+        lateFee,
+        totalAmount: totalAmount || amount,
+        daysLate,
+        inGrace
+    };
 
     document.getElementById('modal_installment_id').value = installmentId;
     document.getElementById('modal_loan_id').value = loanId;
     document.getElementById('modal_installment_info').textContent = '#' + installmentNumber;
     document.getElementById('modal_original_amount').textContent = 'R$ ' + amount.toFixed(2).replace('.', ',');
 
-    // Calcular multa se atrasada
-    if (status === 'overdue') {
-        // Aqui você pode fazer uma chamada AJAX para calcular a multa ou passar via data-attribute
-        document.getElementById('adjustment_type').querySelector('option[value="late_fee"]').style.display = 'block';
+    // Exibir informações de multa se atrasada
+    const lateFeeInfo = document.getElementById('modal_late_fee_info');
+    if (status === 'overdue' && lateFee > 0) {
+        lateFeeInfo.innerHTML = `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="color: #dc2626;">Multa por Atraso (${daysLate} dia${daysLate > 1 ? 's' : ''}):</span>
+                <strong style="color: #dc2626;">+ R$ ${lateFee.toFixed(2).replace('.', ',')}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; border-top: 1px solid #d1d5db;">
+                <span style="font-weight: 600;">Total com Multa:</span>
+                <strong style="color: #059669; font-size: 1.1rem;">R$ ${totalAmount.toFixed(2).replace('.', ',')}</strong>
+            </div>
+        `;
+        lateFeeInfo.style.display = 'block';
+    } else if (status === 'overdue' && inGrace) {
+        lateFeeInfo.innerHTML = `
+            <div style="color: #f59e0b; font-size: 0.875rem;">
+                ⏳ Parcela em período de carência (${daysLate} dia${daysLate > 1 ? 's' : ''} de atraso)
+            </div>
+        `;
+        lateFeeInfo.style.display = 'block';
     } else {
-        document.getElementById('adjustment_type').querySelector('option[value="late_fee"]').style.display = 'none';
+        lateFeeInfo.style.display = 'none';
     }
 
     document.getElementById('adjustment_type').value = 'none';
@@ -422,19 +464,21 @@ function toggleAdjustment() {
 function calculateTotal() {
     const type = document.getElementById('adjustment_type').value;
     const adjustmentValue = parseFloat(document.getElementById('adjustment_value').value) || 0;
-    const originalAmount = currentInstallment.amount;
 
-    let finalAmount = originalAmount;
+    // Usar valor COM multa como base para cálculo (se houver multa)
+    const baseAmount = currentInstallment.totalAmount || currentInstallment.amount;
+
+    let finalAmount = baseAmount;
     let adjustmentAmount = 0;
     let adjustmentText = '';
 
     if (type === 'discount') {
         adjustmentAmount = -adjustmentValue;
-        finalAmount = originalAmount - adjustmentValue;
+        finalAmount = baseAmount - adjustmentValue;
         adjustmentText = `Desconto de R$ ${adjustmentValue.toFixed(2).replace('.', ',')}`;
     } else if (type === 'addition') {
         adjustmentAmount = adjustmentValue;
-        finalAmount = originalAmount + adjustmentValue;
+        finalAmount = baseAmount + adjustmentValue;
         adjustmentText = `Acréscimo de R$ ${adjustmentValue.toFixed(2).replace('.', ',')}`;
     }
 

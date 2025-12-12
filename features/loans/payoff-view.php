@@ -35,9 +35,26 @@ if ($loan['status'] === 'paid') {
 $installments = $loanService->getInstallments($loanId, $userId);
 $wallets = $walletService->getAllWallets($userId);
 
-// Calcular valores pendentes
+// Calcular valores pendentes considerando multas
 $pendingInstallments = array_filter($installments, fn($i) => $i['status'] !== 'paid');
-$totalPending = array_sum(array_map(fn($i) => $i['amount'], $pendingInstallments));
+$totalPending = 0;
+$totalLateFees = 0;
+$totalOriginal = 0;
+
+foreach ($pendingInstallments as $installment) {
+    $amount = $installment['amount'];
+    $totalOriginal += $amount;
+
+    // Se está atrasada, calcular multa
+    if ($installment['status'] === 'overdue') {
+        $lateFeeInfo = $loanService->calculateLateFee($amount, $installment['due_date']);
+        $totalPending += $lateFeeInfo['total_amount'];
+        $totalLateFees += $lateFeeInfo['late_fee_amount'];
+    } else {
+        $totalPending += $amount;
+    }
+}
+
 $countPending = count($pendingInstallments);
 
 $pageTitle = 'Quitar Empréstimo';
@@ -68,7 +85,17 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                 <strong style="color: #dc3545;"><?= $countPending ?> parcelas</strong>
             </div>
             <div style="display: flex; justify-content: space-between; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb;">
-                <span style="color: #6b7280;">Total Pendente:</span>
+                <span style="color: #6b7280;">Total Original Pendente:</span>
+                <strong>R$ <?= number_format($totalOriginal, 2, ',', '.') ?></strong>
+            </div>
+            <?php if ($totalLateFees > 0): ?>
+            <div style="display: flex; justify-content: space-between; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb;">
+                <span style="color: #dc2626;">+ Multas por Atraso:</span>
+                <strong style="color: #dc2626;">R$ <?= number_format($totalLateFees, 2, ',', '.') ?></strong>
+            </div>
+            <?php endif; ?>
+            <div style="display: flex; justify-content: space-between; padding-top: 0.5rem;">
+                <span style="color: #1f2937; font-weight: 600;">Total a Receber:</span>
                 <strong style="color: #dc3545; font-size: 1.25rem;">R$ <?= number_format($totalPending, 2, ',', '.') ?></strong>
             </div>
         </div>
