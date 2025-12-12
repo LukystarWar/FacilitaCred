@@ -22,7 +22,7 @@ $filters = [
 
 // Capturar página atual
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-$perPage = 15;
+$perPage = 20;
 
 // Buscar empréstimos com filtros e paginação
 $result = $loanService->getAllLoans(Session::get('user_id'), $filters, $page, $perPage);
@@ -208,7 +208,7 @@ $ativos = count(array_filter($loans, fn($l) => $l['status'] === 'active'));
                                         <img src="<?= ASSETS_URL ?>/images/ver.png" alt="Ver" style="width: 20px; height: 20px; cursor: pointer;">
                                     </a>
                                     <?php if ($loan['status'] === 'active'): ?>
-                                        <a href="<?= BASE_URL ?>/loans/whatsapp?loan_id=<?= $loan['id'] ?>&template=<?= $loan['overdue_installments'] > 0 ? 'cobranca' : 'lembrete' ?>" title="Enviar WhatsApp">
+                                        <a href="<?= BASE_URL ?>/loans/whatsapp?loan_id=<?= $loan['id'] ?>&template=<?= $loan['overdue_installments'] > 0 ? 'cobranca' : 'lembrete' ?>" title="Enviar WhatsApp" target="_blank">
                                             <img src="<?= ASSETS_URL ?>/images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; cursor: pointer;">
                                         </a>
                                     <?php endif; ?>

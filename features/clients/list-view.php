@@ -85,7 +85,7 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                         <th>Nome</th>
                         <th>CPF</th>
                         <th>Telefone</th>
-                        <th>Empréstimos</th>
+                        <th class="text-center">Empréstimos</th>
                         <th>Dívida Ativa</th>
                         <th class="text-center">Ações</th>
                     </tr>
@@ -96,7 +96,7 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                             <td><strong><?= htmlspecialchars($client['name']) ?></strong></td>
                             <td><?= $client['cpf'] ? $clientService->formatCPF($client['cpf']) : '-' ?></td>
                             <td><?= $client['phone'] ? $clientService->formatPhone($client['phone']) : '-' ?></td>
-                            <td><?= $client['loan_count'] ?? 0 ?></td>
+                            <td class="text-center"><?= $client['loan_count'] ?? 0 ?></td>
                             <td>
                                 <?php if ($client['active_debt'] > 0): ?>
                                     <span style="color: #dc3545; font-weight: 600;">

@@ -12,6 +12,9 @@ $walletService = new WalletService();
 $walletFilter = intval($_GET['wallet_id'] ?? 0);
 $startDate = $_GET['start_date'] ?? date('Y-m-01');
 $endDate = $_GET['end_date'] ?? date('Y-m-d');
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$perPage = 20;
+$offset = ($page - 1) * $perPage;
 
 $wallets = $walletService->getAllWallets($userId);
 
@@ -34,10 +37,25 @@ if ($walletFilter > 0) {
     $params['wallet_id'] = $walletFilter;
 }
 
-$sql .= " ORDER BY t.created_at DESC";
+// Contar total de registros para paginação
+$countSql = "SELECT COUNT(*) FROM wallet_transactions t WHERE DATE(t.created_at) BETWEEN :start_date AND :end_date";
+if ($walletFilter > 0) {
+    $countSql .= " AND t.wallet_id = :wallet_id";
+}
+$countStmt = $db->prepare($countSql);
+$countStmt->execute($params);
+$totalRecords = $countStmt->fetchColumn();
+$totalPages = ceil($totalRecords / $perPage);
+
+$sql .= " ORDER BY t.created_at DESC LIMIT :limit OFFSET :offset";
 
 $stmt = $db->prepare($sql);
-$stmt->execute($params);
+foreach ($params as $key => $value) {
+    $stmt->bindValue(':' . $key, $value);
+}
+$stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmt->execute();
 $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $totalEntradas = array_sum(array_map(fn($t) => in_array($t['type'], ['deposit', 'transfer_in', 'loan_payment']) ? $t['amount'] : 0, $transactions));
@@ -172,6 +190,51 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                 </tfoot>
             </table>
         </div>
+
+        <?php if ($totalPages > 1): ?>
+        <!-- Paginação -->
+        <div style="padding: 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <div style="color: #6b7280; font-size: 0.875rem;">
+                Página <?= $page ?> de <?= $totalPages ?> (<?= $totalRecords ?> transações)
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <?php
+                $buildUrl = function($p) use ($walletFilter, $startDate, $endDate) {
+                    $params = ['page' => $p];
+                    if ($walletFilter > 0) $params['wallet_id'] = $walletFilter;
+                    if ($startDate) $params['start_date'] = $startDate;
+                    if ($endDate) $params['end_date'] = $endDate;
+                    return BASE_URL . '/reports/cash-flow?' . http_build_query($params);
+                };
+                ?>
+
+                <?php if ($page > 1): ?>
+                    <a href="<?= $buildUrl(1) ?>" class="btn btn-sm btn-outline">« Primeira</a>
+                    <a href="<?= $buildUrl($page - 1) ?>" class="btn btn-sm btn-outline">‹ Anterior</a>
+                <?php endif; ?>
+
+                <?php
+                $startPage = max(1, $page - 2);
+                $endPage = min($totalPages, $page + 2);
+
+                for ($i = $startPage; $i <= $endPage; $i++):
+                    if ($i == $page):
+                ?>
+                    <span class="btn btn-sm btn-primary"><?= $i ?></span>
+                <?php else: ?>
+                    <a href="<?= $buildUrl($i) ?>" class="btn btn-sm btn-outline"><?= $i ?></a>
+                <?php
+                    endif;
+                endfor;
+                ?>
+
+                <?php if ($page < $totalPages): ?>
+                    <a href="<?= $buildUrl($page + 1) ?>" class="btn btn-sm btn-outline">Próxima ›</a>
+                    <a href="<?= $buildUrl($totalPages) ?>" class="btn btn-sm btn-outline">Última »</a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 
