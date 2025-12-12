@@ -526,7 +526,8 @@ class LoanService {
                 'late_fee_percentage' => 0,
                 'late_fee_amount' => 0,
                 'total_amount' => $installmentAmount,
-                'in_grace_period' => true
+                'in_grace_period' => true,
+                'grace_period_days' => $gracePeriodDays
             ];
         }
 
