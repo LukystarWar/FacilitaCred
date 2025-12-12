@@ -76,11 +76,6 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                     <a href="<?= BASE_URL ?>/whatsapp/templates/edit?id=<?= $template['id'] ?>" class="btn btn-sm btn-secondary">
                         ✏️ Editar
                     </a>
-                    <a href="<?= BASE_URL ?>/whatsapp/templates/delete?id=<?= $template['id'] ?>"
-                       class="btn btn-sm btn-danger"
-                       onclick="return confirm('Tem certeza que deseja excluir este template?')">
-                        🗑️ Excluir
-                    </a>
                 </div>
 
                 <div style="padding: 0 1.5rem 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">
