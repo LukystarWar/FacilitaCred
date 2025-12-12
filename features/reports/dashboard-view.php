@@ -10,9 +10,19 @@ $userId = Session::get('user_id');
 $walletService = new WalletService();
 $loanService = new LoanService();
 
+// Período: mês atual
+$currentMonth = date('Y-m-01'); // Primeiro dia do mês
+$currentMonthEnd = date('Y-m-t'); // Último dia do mês
+$monthName = date('F/Y'); // Ex: December/2025
+
 $totalCarteiras = $walletService->getTotalBalance($userId);
 $wallets = $walletService->getAllWallets($userId);
-$loansResult = $loanService->getAllLoans($userId, [], 1, 1000); // Pegar todos os empréstimos sem paginação
+
+// Buscar empréstimos do mês atual
+$loansResult = $loanService->getAllLoans($userId, [
+    'start_date' => $currentMonth,
+    'end_date' => $currentMonthEnd
+], 1, 1000);
 $loans = $loansResult['data'];
 
 $totalEmprestado = array_sum(array_column($loans, 'amount'));
@@ -59,7 +69,12 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 ?>
 
 <div class="page-header">
-    <h1>Dashboard</h1>
+    <div>
+        <h1>Dashboard</h1>
+        <p class="page-subtitle" style="color: #6b7280; margin-top: 0.25rem;">
+            Estatísticas de <?= strftime('%B/%Y', strtotime($currentMonth)) ?>
+        </p>
+    </div>
     <div style="display: flex; gap: 0.75rem;">
         <a href="<?= BASE_URL ?>/wallets" class="btn btn-secondary">Carteiras</a>
         <a href="<?= BASE_URL ?>/loans/create" class="btn btn-primary">+ Novo Empréstimo</a>
@@ -69,22 +84,22 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
     <div class="stat-card" style="border-left: 4px solid #11C76F;">
         <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalCarteiras, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Total em Carteiras</div>
+        <div class="stat-label" style="color: #6b7280;">Saldo em Carteiras</div>
     </div>
 
     <div class="stat-card" style="border-left: 4px solid #EA580C;">
         <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalEmprestado, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Total Emprestado</div>
+        <div class="stat-label" style="color: #6b7280;">Emprestado no Mês</div>
     </div>
 
     <div class="stat-card" style="border-left: 4px solid #0D9488;">
         <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalReceber, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Total a Receber</div>
+        <div class="stat-label" style="color: #6b7280;">A Receber (Ativos)</div>
     </div>
 
     <div class="stat-card" style="border-left: 4px solid #65A30D;">
         <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($lucroTotal, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Lucro Total (Juros)</div>
+        <div class="stat-label" style="color: #6b7280;">Lucro do Mês (Juros)</div>
     </div>
 </div>
 
