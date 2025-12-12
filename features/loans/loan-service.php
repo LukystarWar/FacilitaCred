@@ -383,8 +383,15 @@ class LoanService {
                 return ['success' => false, 'error' => 'Parcela já foi paga'];
             }
 
-            // Calcular valor final (com ajuste se houver)
-            $finalAmount = $installment['amount'] + $adjustmentAmount;
+            // Calcular valor base (original + multa se atrasada)
+            $baseAmount = $installment['amount'];
+            if ($installment['status'] === 'overdue') {
+                $lateFeeInfo = $this->calculateLateFee($installment['amount'], $installment['due_date']);
+                $baseAmount = $lateFeeInfo['total_amount'];
+            }
+
+            // Calcular valor final (base + ajuste se houver)
+            $finalAmount = $baseAmount + $adjustmentAmount;
 
             // Marcar parcela como paga
             $stmt = $this->db->prepare("
@@ -519,7 +526,20 @@ class LoanService {
                 return ['success' => false, 'error' => 'Não há parcelas pendentes'];
             }
 
-            $totalPending = array_sum(array_map(fn($i) => $i['amount'], $pendingInstallments));
+            // Calcular total pendente considerando multas
+            $totalPendingWithFees = 0;
+            $installmentAmounts = [];
+            foreach ($pendingInstallments as $installment) {
+                $baseAmount = $installment['amount'];
+                // Se está atrasada, adicionar multa
+                if ($installment['status'] === 'overdue') {
+                    $lateFeeInfo = $this->calculateLateFee($installment['amount'], $installment['due_date']);
+                    $baseAmount = $lateFeeInfo['total_amount'];
+                }
+                $installmentAmounts[$installment['id']] = $baseAmount;
+                $totalPendingWithFees += $baseAmount;
+            }
+
             $countPending = count($pendingInstallments);
 
             // Distribuir o ajuste proporcionalmente entre as parcelas
@@ -527,7 +547,8 @@ class LoanService {
 
             // Marcar todas as parcelas pendentes como pagas
             foreach ($pendingInstallments as $installment) {
-                $amountPaid = $installment['amount'] + $adjustmentPerInstallment;
+                // Usar valor base (com multa se houver) + ajuste proporcional
+                $amountPaid = $installmentAmounts[$installment['id']] + $adjustmentPerInstallment;
 
                 $stmt = $this->db->prepare("
                     UPDATE loan_installments
