@@ -21,19 +21,13 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 
 <div class="page-header">
     <h1>Templates WhatsApp</h1>
-    <a href="<?= BASE_URL ?>/whatsapp/templates/create" class="btn btn-primary">
-        + Novo Template
-    </a>
 </div>
 
 <?php if (empty($templates)): ?>
     <div class="empty-state">
         <div class="empty-icon">💬</div>
         <h3>Nenhum template encontrado</h3>
-        <p>Crie seu primeiro template de WhatsApp.</p>
-        <a href="<?= BASE_URL ?>/whatsapp/templates/create" class="btn btn-primary">
-            + Criar Primeiro Template
-        </a>
+        <p>Configure os templates de WhatsApp do sistema.</p>
     </div>
 <?php else: ?>
     <div style="display: grid; gap: 1.5rem;">
