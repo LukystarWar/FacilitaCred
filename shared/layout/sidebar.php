@@ -51,6 +51,11 @@ function isActive($path) {
             <span>Empréstimos</span>
         </a>
 
+        <a href="<?= Router::url('/whatsapp') ?>" class="sidebar-nav-item <?= isActive('/whatsapp') ?>">
+            <img src="<?= ASSETS_URL ?>/images/whatsapp.png" alt="WhatsApp" class="sidebar-icon">
+            <span>WhatsApp</span>
+        </a>
+
         <a href="<?= Router::url('/reports/cash-flow') ?>" class="sidebar-nav-item <?= isActive('/reports') ?>">
             <img src="<?= ASSETS_URL ?>/images/relatorios.png" alt="Relatórios" class="sidebar-icon">
             <span>Relatórios</span>
