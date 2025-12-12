@@ -51,7 +51,7 @@ function isActive($path) {
             <span>Empréstimos</span>
         </a>
 
-        <a href="<?= Router::url('/whatsapp') ?>" class="sidebar-nav-item <?= isActive('/whatsapp') ?>">
+        <a href="<?= Router::url('/whatsapp/templates') ?>" class="sidebar-nav-item <?= isActive('/whatsapp') ?>">
             <img src="<?= ASSETS_URL ?>/images/whatsapp.png" alt="WhatsApp" class="sidebar-icon">
             <span>WhatsApp</span>
         </a>
