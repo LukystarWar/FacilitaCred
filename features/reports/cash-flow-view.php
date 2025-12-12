@@ -21,9 +21,16 @@ $wallets = $walletService->getAllWallets($userId);
 $sql = "
     SELECT
         t.*,
-        w.name as wallet_name
+        w.name as wallet_name,
+        c.name as client_name,
+        l.id as loan_id
     FROM wallet_transactions t
     INNER JOIN wallets w ON t.wallet_id = w.id
+    LEFT JOIN loans l ON (
+        (t.type IN ('loan_out', 'loan_payment')) AND
+        (t.description LIKE CONCAT('%#', l.id, '%'))
+    )
+    LEFT JOIN clients c ON l.client_id = c.id
     WHERE DATE(t.created_at) BETWEEN :start_date AND :end_date
 ";
 
@@ -170,7 +177,12 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                                 echo $badges[$transaction['type']] ?? $transaction['type'];
                                 ?>
                             </td>
-                            <td><?= htmlspecialchars($transaction['description']) ?></td>
+                            <td>
+                                <?= htmlspecialchars($transaction['description']) ?>
+                                <?php if (!empty($transaction['client_name'])): ?>
+                                    <br><small class="text-muted">Cliente: <strong><?= htmlspecialchars($transaction['client_name']) ?></strong></small>
+                                <?php endif; ?>
+                            </td>
                             <td class="text-right">
                                 <strong style="color: <?= in_array($transaction['type'], ['deposit', 'transfer_in', 'loan_payment']) ? '#10b981' : '#e74c3c' ?>">
                                     <?= in_array($transaction['type'], ['deposit', 'transfer_in', 'loan_payment']) ? '+' : '-' ?>

@@ -224,9 +224,17 @@ class WalletService {
             }
 
             $stmt = $this->db->prepare("
-                SELECT * FROM wallet_transactions
-                WHERE wallet_id = :wallet_id
-                ORDER BY created_at DESC
+                SELECT
+                    wt.*,
+                    c.name as client_name
+                FROM wallet_transactions wt
+                LEFT JOIN loans l ON (
+                    (wt.type IN ('loan_out', 'loan_payment')) AND
+                    (wt.description LIKE CONCAT('%#', l.id, '%'))
+                )
+                LEFT JOIN clients c ON l.client_id = c.id
+                WHERE wt.wallet_id = :wallet_id
+                ORDER BY wt.created_at DESC
                 LIMIT :limit
             ");
             $stmt->bindValue(':wallet_id', $walletId, PDO::PARAM_INT);

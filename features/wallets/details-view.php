@@ -105,7 +105,12 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                                 echo $badges[$transaction['type']] ?? $transaction['type'];
                                 ?>
                             </td>
-                            <td><?= htmlspecialchars($transaction['description']) ?></td>
+                            <td>
+                                <?= htmlspecialchars($transaction['description']) ?>
+                                <?php if (!empty($transaction['client_name'])): ?>
+                                    <br><small class="text-muted">Cliente: <strong><?= htmlspecialchars($transaction['client_name']) ?></strong></small>
+                                <?php endif; ?>
+                            </td>
                             <td class="text-right">
                                 <?php
                                 $isIncome = in_array($transaction['type'], ['deposit', 'transfer_in', 'loan_payment']);
