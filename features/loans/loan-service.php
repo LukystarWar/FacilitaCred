@@ -119,6 +119,89 @@ class LoanService {
         }
     }
 
+    /**
+     * Calcula estatísticas dos empréstimos com filtros aplicados
+     */
+    public function getLoansStats($userId, $filters = []) {
+        try {
+            $where = ["l.user_id = :user_id"];
+            $params = ['user_id' => $userId];
+
+            // Aplicar os mesmos filtros do getAllLoans
+            if (!empty($filters['status'])) {
+                if ($filters['status'] === 'overdue') {
+                    $where[] = "l.status = 'active' AND EXISTS (SELECT 1 FROM loan_installments WHERE loan_id = l.id AND status = 'overdue')";
+                } else {
+                    $where[] = "l.status = :status";
+                    $params['status'] = $filters['status'];
+                }
+            }
+
+            if (!empty($filters['client_id'])) {
+                $where[] = "l.client_id = :client_id";
+                $params['client_id'] = $filters['client_id'];
+            }
+
+            if (!empty($filters['wallet_id'])) {
+                $where[] = "l.wallet_id = :wallet_id";
+                $params['wallet_id'] = $filters['wallet_id'];
+            }
+
+            if (!empty($filters['search'])) {
+                $where[] = "(c.name LIKE :search OR c.cpf LIKE :search)";
+                $params['search'] = '%' . $filters['search'] . '%';
+            }
+
+            if (!empty($filters['start_date'])) {
+                $where[] = "DATE(l.created_at) >= :start_date";
+                $params['start_date'] = $filters['start_date'];
+            }
+
+            if (!empty($filters['end_date'])) {
+                $where[] = "DATE(l.created_at) <= :end_date";
+                $params['end_date'] = $filters['end_date'];
+            }
+
+            $whereClause = implode(" AND ", $where);
+
+            // Query para calcular estatísticas
+            $stmt = $this->db->prepare("
+                SELECT
+                    COUNT(*) as total_loans,
+                    COUNT(CASE WHEN l.status = 'active' THEN 1 END) as active_loans,
+                    SUM(l.amount) as total_emprestado,
+                    SUM(l.interest_amount) as total_juros,
+                    SUM(CASE
+                        WHEN l.status = 'active'
+                        THEN l.total_amount * ((l.total_installments - l.paid_installments) / l.total_installments)
+                        ELSE 0
+                    END) as total_a_receber
+                FROM loans l
+                INNER JOIN clients c ON l.client_id = c.id
+                WHERE {$whereClause}
+            ");
+            $stmt->execute($params);
+            $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            return [
+                'total_loans' => (int)$stats['total_loans'],
+                'active_loans' => (int)$stats['active_loans'],
+                'total_emprestado' => (float)$stats['total_emprestado'] ?? 0,
+                'total_juros' => (float)$stats['total_juros'] ?? 0,
+                'total_a_receber' => (float)$stats['total_a_receber'] ?? 0
+            ];
+        } catch (PDOException $e) {
+            error_log("Erro ao calcular estatísticas: " . $e->getMessage());
+            return [
+                'total_loans' => 0,
+                'active_loans' => 0,
+                'total_emprestado' => 0,
+                'total_juros' => 0,
+                'total_a_receber' => 0
+            ];
+        }
+    }
+
     public function getLoanById($id, $userId) {
         try {
             $stmt = $this->db->prepare("

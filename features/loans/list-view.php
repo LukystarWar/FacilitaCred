@@ -29,6 +29,9 @@ $result = $loanService->getAllLoans(Session::get('user_id'), $filters, $page, $p
 $loans = $result['data'];
 $pagination = $result['pagination'];
 
+// Buscar estatísticas com os mesmos filtros
+$stats = $loanService->getLoansStats(Session::get('user_id'), $filters);
+
 // Buscar clientes e carteiras para os filtros
 $clientService = new ClientService();
 $walletService = new WalletService();
@@ -106,31 +109,22 @@ require_once __DIR__ . '/../../shared/layout/header.php';
     </form>
 </div>
 
-<?php
-$totalEmprestado = array_sum(array_column($loans, 'amount'));
-$totalReceber = array_sum(array_map(function($l) {
-    return $l['status'] === 'active' ? $l['total_amount'] * (($l['total_installments'] - $l['paid_installments']) / $l['total_installments']) : 0;
-}, $loans));
-$totalJuros = array_sum(array_column($loans, 'interest_amount'));
-$ativos = count(array_filter($loans, fn($l) => $l['status'] === 'active'));
-?>
-
 <div class="stats-grid" style="margin-bottom: 2rem;">
     <div class="stat-card" style="border-left: 4px solid #6b7280;">
-        <div class="stat-value" style="color: #1C1C1C;"><?= $pagination['total'] ?></div>
+        <div class="stat-value" style="color: #1C1C1C;"><?= $stats['total_loans'] ?></div>
         <div class="stat-label" style="color: #6b7280;">Total de Empréstimos</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #11C76F;">
-        <div class="stat-value" style="color: #1C1C1C;"><?= $ativos ?></div>
-        <div class="stat-label" style="color: #6b7280;">Empréstimos Ativos (página)</div>
+        <div class="stat-value" style="color: #1C1C1C;"><?= $stats['active_loans'] ?></div>
+        <div class="stat-label" style="color: #6b7280;">Empréstimos Ativos</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #EA580C;">
-        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalEmprestado, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Total Emprestado (página)</div>
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($stats['total_emprestado'], 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total Emprestado</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #0D9488;">
-        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalReceber, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">A Receber (página)</div>
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($stats['total_a_receber'], 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">A Receber</div>
     </div>
 </div>
 
