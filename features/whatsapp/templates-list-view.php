@@ -26,39 +26,6 @@ require_once __DIR__ . '/../../shared/layout/header.php';
     </a>
 </div>
 
-<!-- Filtros -->
-<div class="card" style="margin-bottom: 1.5rem;">
-    <div class="card-header">
-        <h3 style="margin: 0; font-size: 1rem; font-weight: 600;">🔍 Filtros</h3>
-    </div>
-    <form method="GET" action="<?= BASE_URL ?>/whatsapp/templates" style="padding: 1.5rem;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-            <div>
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Categoria</label>
-                <select name="category" class="form-control">
-                    <option value="">Todas</option>
-                    <option value="cobranca" <?= $filters['category'] === 'cobranca' ? 'selected' : '' ?>>Cobrança</option>
-                    <option value="lembrete" <?= $filters['category'] === 'lembrete' ? 'selected' : '' ?>>Lembrete</option>
-                    <option value="confirmacao" <?= $filters['category'] === 'confirmacao' ? 'selected' : '' ?>>Confirmação</option>
-                    <option value="outros" <?= $filters['category'] === 'outros' ? 'selected' : '' ?>>Outros</option>
-                </select>
-            </div>
-            <div>
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Status</label>
-                <select name="is_active" class="form-control">
-                    <option value="">Todos</option>
-                    <option value="1" <?= $filters['is_active'] === '1' ? 'selected' : '' ?>>Ativos</option>
-                    <option value="0" <?= $filters['is_active'] === '0' ? 'selected' : '' ?>>Inativos</option>
-                </select>
-            </div>
-        </div>
-        <div style="display: flex; gap: 0.75rem;">
-            <button type="submit" class="btn btn-primary">Filtrar</button>
-            <a href="<?= BASE_URL ?>/whatsapp/templates" class="btn btn-secondary">Limpar</a>
-        </div>
-    </form>
-</div>
-
 <?php if (empty($templates)): ?>
     <div class="empty-state">
         <div class="empty-icon">💬</div>
@@ -87,15 +54,11 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                         <?php
                         $categoryLabels = [
                             'cobranca' => 'Cobrança',
-                            'lembrete' => 'Lembrete',
-                            'confirmacao' => 'Confirmação',
-                            'outros' => 'Outros'
+                            'lembrete' => 'Lembrete'
                         ];
                         $categoryColors = [
                             'cobranca' => '#dc3545',
-                            'lembrete' => '#ffc107',
-                            'confirmacao' => '#28a745',
-                            'outros' => '#6c757d'
+                            'lembrete' => '#ffc107'
                         ];
                         ?>
                         <span class="badge" style="background: <?= $categoryColors[$template['category']] ?>; color: white;">

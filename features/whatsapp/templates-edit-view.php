@@ -55,8 +55,6 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                         <option value="">Selecione...</option>
                         <option value="cobranca" <?= $template['category'] === 'cobranca' ? 'selected' : '' ?>>Cobrança</option>
                         <option value="lembrete" <?= $template['category'] === 'lembrete' ? 'selected' : '' ?>>Lembrete</option>
-                        <option value="confirmacao" <?= $template['category'] === 'confirmacao' ? 'selected' : '' ?>>Confirmação</option>
-                        <option value="outros" <?= $template['category'] === 'outros' ? 'selected' : '' ?>>Outros</option>
                     </select>
                 </div>
 

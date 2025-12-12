@@ -40,8 +40,6 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                         <option value="">Selecione...</option>
                         <option value="cobranca">Cobrança</option>
                         <option value="lembrete">Lembrete</option>
-                        <option value="confirmacao">Confirmação</option>
-                        <option value="outros">Outros</option>
                     </select>
                 </div>
 
