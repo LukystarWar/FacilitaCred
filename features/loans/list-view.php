@@ -45,9 +45,16 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 
 <div class="page-header">
     <h1>Empréstimos</h1>
-    <a href="<?= BASE_URL ?>/loans/create" class="btn btn-primary">
-        + Novo Empréstimo
-    </a>
+    <div style="display: flex; gap: 0.75rem;">
+        <?php if ($filters['status'] === 'overdue' && !empty($loans)): ?>
+            <button type="button" class="btn btn-secondary" onclick="cobrarTodosAtrasados()" id="btnCobrarTodos">
+                📢 Cobrar Todos da Página (<?= count($loans) ?>)
+            </button>
+        <?php endif; ?>
+        <a href="<?= BASE_URL ?>/loans/create" class="btn btn-primary">
+            + Novo Empréstimo
+        </a>
+    </div>
 </div>
 
 <!-- Filtros -->
@@ -260,5 +267,67 @@ require_once __DIR__ . '/../../shared/layout/header.php';
         <?php endif; ?>
     </div>
 <?php endif; ?>
+
+<script>
+function cobrarTodosAtrasados() {
+    // Coletar todos os links de WhatsApp da página atual
+    const whatsappLinks = document.querySelectorAll('a[href*="/loans/whatsapp"]');
+    const totalLinks = whatsappLinks.length;
+
+    if (totalLinks === 0) {
+        alert('Nenhum empréstimo atrasado com WhatsApp disponível nesta página.');
+        return;
+    }
+
+    // Confirmar com o usuário
+    const confirmMessage = `Você está prestes a abrir ${totalLinks} aba${totalLinks > 1 ? 's' : ''} do WhatsApp para cobrança.\n\n` +
+                          `IMPORTANTE:\n` +
+                          `- Seu navegador pode bloquear pop-ups. Permita quando solicitado.\n` +
+                          `- As abas serão abertas uma a uma com pequeno intervalo.\n\n` +
+                          `Deseja continuar?`;
+
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    const btn = document.getElementById('btnCobrarTodos');
+    const originalText = btn.innerHTML;
+    let abasAbertas = 0;
+
+    // Desabilitar botão durante o processo
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+
+    // Função para abrir cada aba com delay
+    function abrirProxima(index) {
+        if (index >= whatsappLinks.length) {
+            // Finalizado
+            btn.innerHTML = '✅ Concluído!';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }, 2000);
+            return;
+        }
+
+        // Abrir a aba atual
+        const link = whatsappLinks[index];
+        window.open(link.href, '_blank');
+        abasAbertas++;
+
+        // Atualizar progresso no botão
+        btn.innerHTML = `📢 Abrindo... ${abasAbertas}/${totalLinks}`;
+
+        // Aguardar um pouco antes de abrir a próxima (evita bloqueio do navegador)
+        setTimeout(() => {
+            abrirProxima(index + 1);
+        }, 300); // 300ms de intervalo entre cada aba
+    }
+
+    // Iniciar o processo
+    abrirProxima(0);
+}
+</script>
 
 <?php require_once __DIR__ . '/../../shared/layout/footer.php'; ?>
