@@ -115,6 +115,63 @@ $lucroData = $lucroStmt->fetch(PDO::FETCH_ASSOC);
 $lucroTotal = $lucroData['total_lucro'] ?? 0;
 $emprestimosQuitados = $lucroData['total_emprestimos'] ?? 0;
 
+// Calcular estatísticas adicionais
+require_once __DIR__ . '/../loans/loan-service.php';
+$loanService = new LoanService();
+
+// 1. Clientes com empréstimos ativos
+$clientesAtivosSql = "
+    SELECT COUNT(DISTINCT l.client_id) as total_clientes
+    FROM loans l
+    WHERE l.status = 'active'
+";
+$clientesAtivosParams = [];
+if ($walletFilter > 0) {
+    $clientesAtivosSql .= " AND l.wallet_id = :wallet_id";
+    $clientesAtivosParams['wallet_id'] = $walletFilter;
+}
+$clientesAtivosStmt = $db->prepare($clientesAtivosSql);
+$clientesAtivosStmt->execute($clientesAtivosParams);
+$clientesAtivos = $clientesAtivosStmt->fetchColumn();
+
+// 2. Valor total atrasado (com multas)
+$atrasadoSql = "
+    SELECT i.*, l.wallet_id
+    FROM loan_installments i
+    INNER JOIN loans l ON i.loan_id = l.id
+    WHERE i.status = 'overdue'
+";
+$atrasadoParams = [];
+if ($walletFilter > 0) {
+    $atrasadoSql .= " AND l.wallet_id = :wallet_id";
+    $atrasadoParams['wallet_id'] = $walletFilter;
+}
+$atrasadoStmt = $db->prepare($atrasadoSql);
+$atrasadoStmt->execute($atrasadoParams);
+$parcelasAtrasadas = $atrasadoStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$valorAtrasado = 0;
+foreach ($parcelasAtrasadas as $parcela) {
+    $lateFeeInfo = $loanService->calculateLateFee($parcela['amount'], $parcela['due_date']);
+    $valorAtrasado += $lateFeeInfo['total_amount'];
+}
+
+// 3. Valor em dia (parcelas pendentes não atrasadas)
+$emDiaSql = "
+    SELECT SUM(i.amount) as total_em_dia
+    FROM loan_installments i
+    INNER JOIN loans l ON i.loan_id = l.id
+    WHERE i.status = 'pending'
+";
+$emDiaParams = [];
+if ($walletFilter > 0) {
+    $emDiaSql .= " AND l.wallet_id = :wallet_id";
+    $emDiaParams['wallet_id'] = $walletFilter;
+}
+$emDiaStmt = $db->prepare($emDiaSql);
+$emDiaStmt->execute($emDiaParams);
+$valorEmDia = $emDiaStmt->fetchColumn() ?? 0;
+
 $pageTitle = 'Fluxo de Caixa';
 require_once __DIR__ . '/../../shared/layout/header.php';
 ?>
@@ -206,6 +263,34 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                 <br><small style="font-size: 0.75rem; font-weight: normal;"><?= $emprestimosQuitados ?> empréstimo<?= $emprestimosQuitados > 1 ? 's' : '' ?> quitado<?= $emprestimosQuitados > 1 ? 's' : '' ?></small>
             <?php endif; ?>
         </div>
+    </div>
+</div>
+
+<!-- Cards de Empréstimos -->
+<div class="stats-grid" style="margin-bottom: 2rem;">
+    <div class="stat-card" style="border-left: 4px solid #3B82F6;">
+        <div class="stat-value" style="color: #1C1C1C;"><?= $clientesAtivos ?></div>
+        <div class="stat-label" style="color: #6b7280;">Clientes com Empréstimos Ativos</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 4px solid #DC2626;">
+        <div class="stat-value" style="color: #DC2626;">R$ <?= number_format($valorAtrasado, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">
+            Valor Total Atrasado
+            <?php if (count($parcelasAtrasadas) > 0): ?>
+                <br><small style="font-size: 0.75rem; font-weight: normal;"><?= count($parcelasAtrasadas) ?> parcela<?= count($parcelasAtrasadas) > 1 ? 's' : '' ?> (com multas)</small>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <div class="stat-card" style="border-left: 4px solid #10B981;">
+        <div class="stat-value" style="color: #10B981;">R$ <?= number_format($valorEmDia, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Valor Pendente Em Dia</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 4px solid #8B5CF6;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($valorAtrasado + $valorEmDia, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Total a Receber (Ativos)</div>
     </div>
 </div>
 
