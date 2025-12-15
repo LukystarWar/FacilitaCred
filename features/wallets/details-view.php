@@ -26,8 +26,23 @@ if (!$wallet) {
     exit;
 }
 
-// Buscar transações
-$transactions = $walletService->getTransactions($walletId, $userId, 100);
+// Capturar filtros
+$filters = [
+    'type' => $_GET['type'] ?? '',
+    'search' => $_GET['search'] ?? '',
+    'start_date' => $_GET['start_date'] ?? '',
+    'end_date' => $_GET['end_date'] ?? ''
+];
+
+// Capturar página atual
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$perPage = 20;
+
+// Buscar transações com filtros e paginação
+$result = $walletService->getTransactions($walletId, $userId, 1000, $filters, $page, $perPage);
+$transactions = $result['data'];
+$pagination = $result['pagination'];
+$totalTransactions = $pagination['total'];
 
 $pageTitle = 'Detalhes da Carteira';
 require_once __DIR__ . '/../../shared/layout/header.php';
@@ -54,7 +69,7 @@ require_once __DIR__ . '/../../shared/layout/header.php';
         <div class="stat-label">Saldo Atual</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #6b7280;">
-        <div class="stat-value" style="color: #1C1C1C;"><?= count($transactions) ?></div>
+        <div class="stat-value" style="color: #1C1C1C;"><?= $totalTransactions ?></div>
         <div class="stat-label" style="color: #6b7280;">Total de Transações</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #6b7280;">
@@ -63,9 +78,53 @@ require_once __DIR__ . '/../../shared/layout/header.php';
     </div>
 </div>
 
+<!-- Filtros -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">
+        <h3 style="margin: 0; font-size: 1rem; font-weight: 600;">🔍 Filtros</h3>
+    </div>
+    <form method="GET" action="<?= BASE_URL ?>/wallets/details" style="padding: 1.5rem;">
+        <input type="hidden" name="id" value="<?= $walletId ?>">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Tipo</label>
+                <select name="type" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="deposit" <?= $filters['type'] === 'deposit' ? 'selected' : '' ?>>Depósito</option>
+                    <option value="withdrawal" <?= $filters['type'] === 'withdrawal' ? 'selected' : '' ?>>Retirada</option>
+                    <option value="transfer_in" <?= $filters['type'] === 'transfer_in' ? 'selected' : '' ?>>Transferência Recebida</option>
+                    <option value="transfer_out" <?= $filters['type'] === 'transfer_out' ? 'selected' : '' ?>>Transferência Enviada</option>
+                    <option value="loan_out" <?= $filters['type'] === 'loan_out' ? 'selected' : '' ?>>Empréstimo</option>
+                    <option value="loan_payment" <?= $filters['type'] === 'loan_payment' ? 'selected' : '' ?>>Pagamento</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Buscar</label>
+                <input type="text" name="search" value="<?= htmlspecialchars($filters['search']) ?>"
+                       placeholder="Descrição ou cliente" class="form-control">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Data Inicial</label>
+                <input type="date" name="start_date" value="<?= htmlspecialchars($filters['start_date']) ?>" class="form-control">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Data Final</label>
+                <input type="date" name="end_date" value="<?= htmlspecialchars($filters['end_date']) ?>" class="form-control">
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="<?= BASE_URL ?>/wallets/details?id=<?= $walletId ?>" class="btn btn-secondary">Limpar</a>
+        </div>
+    </form>
+</div>
+
 <div class="card">
     <div class="card-header">
         <h2>Histórico de Transações</h2>
+        <span style="color: #6b7280; font-size: 0.875rem;">
+            Mostrando <?= count($transactions) ?> de <?= $pagination['total'] ?> transações
+        </span>
     </div>
 
     <?php if (empty($transactions)): ?>
@@ -125,6 +184,51 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                 </tbody>
             </table>
         </div>
+
+        <?php if ($pagination['total_pages'] > 1): ?>
+        <!-- Paginação -->
+        <div style="padding: 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <div style="color: #6b7280; font-size: 0.875rem;">
+                Página <?= $pagination['current_page'] ?> de <?= $pagination['total_pages'] ?>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <?php
+                // Construir URL com filtros
+                $queryParams = array_merge(['id' => $walletId], array_filter($filters));
+                $buildUrl = function($page) use ($queryParams) {
+                    $params = array_merge($queryParams, ['page' => $page]);
+                    return BASE_URL . '/wallets/details?' . http_build_query($params);
+                };
+                ?>
+
+                <?php if ($pagination['current_page'] > 1): ?>
+                    <a href="<?= $buildUrl(1) ?>" class="btn btn-sm btn-outline">« Primeira</a>
+                    <a href="<?= $buildUrl($pagination['current_page'] - 1) ?>" class="btn btn-sm btn-outline">‹ Anterior</a>
+                <?php endif; ?>
+
+                <?php
+                // Mostrar páginas próximas
+                $startPage = max(1, $pagination['current_page'] - 2);
+                $endPage = min($pagination['total_pages'], $pagination['current_page'] + 2);
+
+                for ($i = $startPage; $i <= $endPage; $i++):
+                    if ($i == $pagination['current_page']):
+                ?>
+                    <span class="btn btn-sm btn-primary"><?= $i ?></span>
+                <?php else: ?>
+                    <a href="<?= $buildUrl($i) ?>" class="btn btn-sm btn-outline"><?= $i ?></a>
+                <?php
+                    endif;
+                endfor;
+                ?>
+
+                <?php if ($pagination['current_page'] < $pagination['total_pages']): ?>
+                    <a href="<?= $buildUrl($pagination['current_page'] + 1) ?>" class="btn btn-sm btn-outline">Próxima ›</a>
+                    <a href="<?= $buildUrl($pagination['total_pages']) ?>" class="btn btn-sm btn-outline">Última »</a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 

@@ -213,16 +213,60 @@ class WalletService {
     }
 
     /**
-     * Busca transações de uma carteira
+     * Busca transações de uma carteira com filtros e paginação
      */
-    public function getTransactions($walletId, $userId, $limit = 50) {
+    public function getTransactions($walletId, $userId, $limit = 50, $filters = [], $page = 1, $perPage = 20) {
         try {
             // Verificar se a carteira pertence ao usuário
             $wallet = $this->getWalletById($walletId, $userId);
             if (!$wallet) {
-                return [];
+                return ['data' => [], 'pagination' => ['total' => 0, 'per_page' => $perPage, 'current_page' => 1, 'total_pages' => 0]];
             }
 
+            // Construir WHERE clause
+            $where = ["wt.wallet_id = :wallet_id"];
+            $params = ['wallet_id' => $walletId];
+
+            if (!empty($filters['type'])) {
+                $where[] = "wt.type = :type";
+                $params['type'] = $filters['type'];
+            }
+
+            if (!empty($filters['search'])) {
+                $where[] = "(wt.description LIKE :search OR c.name LIKE :search)";
+                $params['search'] = '%' . $filters['search'] . '%';
+            }
+
+            if (!empty($filters['start_date'])) {
+                $where[] = "DATE(wt.created_at) >= :start_date";
+                $params['start_date'] = $filters['start_date'];
+            }
+
+            if (!empty($filters['end_date'])) {
+                $where[] = "DATE(wt.created_at) <= :end_date";
+                $params['end_date'] = $filters['end_date'];
+            }
+
+            $whereClause = implode(" AND ", $where);
+
+            // Contar total de transações
+            $countStmt = $this->db->prepare("
+                SELECT COUNT(*) as total
+                FROM wallet_transactions wt
+                LEFT JOIN loans l ON (
+                    (wt.type IN ('loan_out', 'loan_payment')) AND
+                    (wt.description LIKE CONCAT('%#', l.id, '%'))
+                )
+                LEFT JOIN clients c ON l.client_id = c.id
+                WHERE $whereClause
+            ");
+            $countStmt->execute($params);
+            $totalRecords = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+            // Calcular offset
+            $offset = ($page - 1) * $perPage;
+
+            // Buscar transações com paginação
             $stmt = $this->db->prepare("
                 SELECT
                     wt.*,
@@ -233,17 +277,29 @@ class WalletService {
                     (wt.description LIKE CONCAT('%#', l.id, '%'))
                 )
                 LEFT JOIN clients c ON l.client_id = c.id
-                WHERE wt.wallet_id = :wallet_id
+                WHERE $whereClause
                 ORDER BY wt.created_at DESC
-                LIMIT :limit
+                LIMIT :limit OFFSET :offset
             ");
-            $stmt->bindValue(':wallet_id', $walletId, PDO::PARAM_INT);
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue(":$key", $value);
+            }
+            $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return [
+                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+                'pagination' => [
+                    'total' => $totalRecords,
+                    'per_page' => $perPage,
+                    'current_page' => $page,
+                    'total_pages' => ceil($totalRecords / $perPage)
+                ]
+            ];
         } catch (PDOException $e) {
             error_log("Erro ao buscar transações: " . $e->getMessage());
-            return [];
+            return ['data' => [], 'pagination' => ['total' => 0, 'per_page' => $perPage, 'current_page' => 1, 'total_pages' => 0]];
         }
     }
 

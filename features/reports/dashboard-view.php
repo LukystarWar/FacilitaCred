@@ -18,22 +18,23 @@ $monthName = date('F/Y'); // Ex: December/2025
 $totalCarteiras = $walletService->getTotalBalance($userId);
 $wallets = $walletService->getAllWallets($userId);
 
-// Buscar empréstimos do mês atual
-$loansResult = $loanService->getAllLoans($userId, [
-    'start_date' => $currentMonth,
-    'end_date' => $currentMonthEnd
-], 1, 1000);
-$loans = $loansResult['data'];
+// Buscar TODOS os empréstimos para estatísticas gerais (atemporais)
+$allLoansResult = $loanService->getAllLoans($userId, [], 1, 10000);
+$allLoans = $allLoansResult['data'];
 
-$totalEmprestado = array_sum(array_column($loans, 'amount'));
+// Calcular total emprestado (todos os empréstimos ativos)
+$totalEmprestado = array_sum(array_map(function($l) {
+    return $l['status'] === 'active' ? $l['amount'] : 0;
+}, $allLoans));
+
+// Calcular total a receber (todos os empréstimos ativos)
 $totalReceber = array_sum(array_map(function($l) {
     if ($l['status'] !== 'active') return 0;
     $total = $l['total_amount'];
     $perInstallment = $total / $l['total_installments'];
     $remaining = $total - ($l['paid_installments'] * $perInstallment);
     return $remaining;
-}, $loans));
-$lucroTotal = array_sum(array_column($loans, 'interest_amount'));
+}, $allLoans));
 
 // Parcelas próximas (próximo 1 dia)
 $db = Database::getInstance()->getConnection();
@@ -72,7 +73,7 @@ require_once __DIR__ . '/../../shared/layout/header.php';
     <div>
         <h1>Dashboard</h1>
         <p class="page-subtitle" style="color: #6b7280; margin-top: 0.25rem;">
-            Estatísticas de <?= strftime('%B/%Y', strtotime($currentMonth)) ?>
+            Visão geral do seu negócio
         </p>
     </div>
     <div style="display: flex; gap: 0.75rem;">
@@ -83,23 +84,27 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 
 <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
     <div class="stat-card" style="border-left: 4px solid #11C76F;">
-        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalCarteiras, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Saldo em Carteiras</div>
+        <div class="stat-value" style="color: #11C76F;">R$ <?= number_format($totalCarteiras, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Saldo Disponível</div>
+        <small style="color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Total em carteiras</small>
     </div>
 
     <div class="stat-card" style="border-left: 4px solid #EA580C;">
         <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalEmprestado, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Emprestado no Mês</div>
+        <div class="stat-label" style="color: #6b7280;">Capital Emprestado</div>
+        <small style="color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Empréstimos ativos</small>
     </div>
 
     <div class="stat-card" style="border-left: 4px solid #0D9488;">
         <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($totalReceber, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">A Receber (Ativos)</div>
+        <div class="stat-label" style="color: #6b7280;">A Receber</div>
+        <small style="color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Pendente com juros</small>
     </div>
 
-    <div class="stat-card" style="border-left: 4px solid #65A30D;">
-        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($lucroTotal, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Lucro do Mês (Juros)</div>
+    <div class="stat-card" style="border-left: 4px solid #DC2626;">
+        <div class="stat-value" style="color: #1C1C1C;"><?= count(array_filter($allLoans, fn($l) => $l['status'] === 'active' && $l['overdue_installments'] > 0)) ?></div>
+        <div class="stat-label" style="color: #6b7280;">Com Atraso</div>
+        <small style="color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Empréstimos atrasados</small>
     </div>
 </div>
 

@@ -119,19 +119,19 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 <div class="stats-grid" style="margin-bottom: 2rem;">
     <div class="stat-card" style="border-left: 4px solid #6b7280;">
         <div class="stat-value" style="color: #1C1C1C;"><?= $stats['total_loans'] ?></div>
-        <div class="stat-label" style="color: #6b7280;">Total de Empréstimos</div>
+        <div class="stat-label" style="color: #6b7280;">Quantidade de Empréstimos</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #11C76F;">
         <div class="stat-value" style="color: #1C1C1C;"><?= $stats['active_loans'] ?></div>
-        <div class="stat-label" style="color: #6b7280;">Empréstimos Ativos</div>
+        <div class="stat-label" style="color: #6b7280;">Ativos</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #EA580C;">
         <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($stats['total_emprestado'], 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Total Emprestado</div>
+        <div class="stat-label" style="color: #6b7280;">Capital Emprestado (Principal)</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #0D9488;">
         <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($stats['total_a_receber'], 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">A Receber</div>
+        <div class="stat-label" style="color: #6b7280;">Pendente (Com Juros)</div>
     </div>
 </div>
 
@@ -157,6 +157,7 @@ require_once __DIR__ . '/../../shared/layout/header.php';
             <table class="table" id="loansTable">
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Data</th>
                         <th>Cliente</th>
                         <th>Carteira</th>
@@ -170,6 +171,7 @@ require_once __DIR__ . '/../../shared/layout/header.php';
                 <tbody>
                     <?php foreach ($loans as $loan): ?>
                         <tr>
+                            <td><strong style="color: #6b7280;">#<?= $loan['id'] ?></strong></td>
                             <td><?= date('d/m/Y', strtotime($loan['created_at'])) ?></td>
                             <td>
                                 <strong><?= htmlspecialchars($loan['client_name']) ?></strong>

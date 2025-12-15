@@ -267,30 +267,42 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 </div>
 
 <!-- Cards de Empréstimos -->
-<div class="stats-grid" style="margin-bottom: 2rem;">
-    <div class="stat-card" style="border-left: 4px solid #3B82F6;">
-        <div class="stat-value" style="color: #1C1C1C;"><?= $clientesAtivos ?></div>
-        <div class="stat-label" style="color: #6b7280;">Clientes com Empréstimos Ativos</div>
-    </div>
+<div style="margin-bottom: 2rem;">
+    <h3 style="font-size: 1rem; font-weight: 600; color: #374151; margin-bottom: 1rem;">📊 Análise de Recebíveis</h3>
 
-    <div class="stat-card" style="border-left: 4px solid #DC2626;">
-        <div class="stat-value" style="color: #DC2626;">R$ <?= number_format($valorAtrasado, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">
-            Valor Total Atrasado
-            <?php if (count($parcelasAtrasadas) > 0): ?>
-                <br><small style="font-size: 0.75rem; font-weight: normal;"><?= count($parcelasAtrasadas) ?> parcela<?= count($parcelasAtrasadas) > 1 ? 's' : '' ?> (com multas)</small>
-            <?php endif; ?>
+    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+        <div class="stat-card" style="border-left: 4px solid #3B82F6;">
+            <div class="stat-value" style="color: #1C1C1C;"><?= $clientesAtivos ?></div>
+            <div class="stat-label" style="color: #6b7280;">Clientes com Empréstimos Ativos</div>
         </div>
-    </div>
 
-    <div class="stat-card" style="border-left: 4px solid #10B981;">
-        <div class="stat-value" style="color: #10B981;">R$ <?= number_format($valorEmDia, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Valor Pendente Em Dia</div>
-    </div>
+        <div class="stat-card" style="border-left: 4px solid #DC2626; position: relative;">
+            <div style="position: absolute; top: 8px; right: 8px; background: #FEE2E2; color: #991B1B; font-size: 0.625rem; padding: 0.125rem 0.375rem; border-radius: 4px; font-weight: 600;">ATRASADO</div>
+            <div class="stat-value" style="color: #DC2626;">R$ <?= number_format($valorAtrasado, 2, ',', '.') ?></div>
+            <div class="stat-label" style="color: #6b7280;">
+                Valor Total Atrasado
+                <?php if (count($parcelasAtrasadas) > 0): ?>
+                    <br><small style="font-size: 0.75rem; font-weight: normal;"><?= count($parcelasAtrasadas) ?> parcela<?= count($parcelasAtrasadas) > 1 ? 's' : '' ?> (com multas)</small>
+                <?php endif; ?>
+            </div>
+        </div>
 
-    <div class="stat-card" style="border-left: 4px solid #8B5CF6;">
-        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($valorAtrasado + $valorEmDia, 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Total a Receber (Ativos)</div>
+        <div class="stat-card" style="border-left: 4px solid #10B981; position: relative;">
+            <div style="position: absolute; top: 8px; right: 8px; background: #D1FAE5; color: #065F46; font-size: 0.625rem; padding: 0.125rem 0.375rem; border-radius: 4px; font-weight: 600;">EM DIA</div>
+            <div class="stat-value" style="color: #10B981;">R$ <?= number_format($valorEmDia, 2, ',', '.') ?></div>
+            <div class="stat-label" style="color: #6b7280;">Valor Pendente Em Dia</div>
+        </div>
+
+        <div class="stat-card" style="border-left: 4px solid #8B5CF6; background: linear-gradient(to bottom, #F5F3FF 0%, #FFFFFF 100%); position: relative;">
+            <div style="position: absolute; top: 8px; right: 8px; background: #8B5CF6; color: white; font-size: 0.625rem; padding: 0.125rem 0.375rem; border-radius: 4px; font-weight: 600;">TOTAL</div>
+            <div class="stat-value" style="color: #8B5CF6; font-size: 1.75rem;">R$ <?= number_format($valorAtrasado + $valorEmDia, 2, ',', '.') ?></div>
+            <div class="stat-label" style="color: #6b7280;">
+                Total a Receber (Ativos)
+                <br><small style="font-size: 0.75rem; color: #9CA3AF; margin-top: 0.25rem; display: block;">
+                    = <span style="color: #DC2626;">Atrasado</span> + <span style="color: #10B981;">Em Dia</span>
+                </small>
+            </div>
+        </div>
     </div>
 </div>
 

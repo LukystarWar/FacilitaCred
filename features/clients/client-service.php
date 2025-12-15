@@ -52,7 +52,7 @@ class ClientService {
                 LEFT JOIN loans l ON c.id = l.client_id
                 WHERE $whereClause
                 GROUP BY c.id
-                ORDER BY c.created_at DESC
+                ORDER BY active_debt DESC, c.created_at DESC
                 LIMIT :limit OFFSET :offset
             ");
 

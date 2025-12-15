@@ -15,7 +15,7 @@ require_once SHARED_PATH . '/layout/header.php';
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        background: linear-gradient(135deg, #11C76F 0%, #0E9F59 100%);
+        background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
         padding: var(--spacing-lg);
     }
 
@@ -31,23 +31,29 @@ require_once SHARED_PATH . '/layout/header.php';
     .login-header {
         text-align: center;
         margin-bottom: var(--spacing-2xl);
+        padding-bottom: var(--spacing-lg);
+        border-bottom: 1px solid #e5e7eb;
     }
 
     .login-logo {
-        font-size: 4rem;
-        margin-bottom: var(--spacing-md);
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #11C76F;
+        margin-bottom: var(--spacing-sm);
+        letter-spacing: -0.5px;
     }
 
     .login-title {
-        font-size: var(--font-size-2xl);
-        font-weight: 700;
-        color: var(--gray-900);
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--gray-700);
         margin-bottom: var(--spacing-xs);
     }
 
     .login-subtitle {
         color: var(--gray-600);
         font-size: var(--font-size-sm);
+        margin: 0;
     }
 
     .login-form {
@@ -58,6 +64,13 @@ require_once SHARED_PATH . '/layout/header.php';
         text-align: center;
         font-size: var(--font-size-sm);
         color: var(--gray-500);
+        padding-top: var(--spacing-lg);
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .login-footer p {
+        margin: 0;
+        margin-bottom: 0.25rem;
     }
 
     @media (max-width: 480px) {
@@ -70,8 +83,7 @@ require_once SHARED_PATH . '/layout/header.php';
 <div class="login-container">
     <div class="login-card">
         <div class="login-header">
-            <div class="login-logo">💰</div>
-            <h1 class="login-title"><?= APP_NAME ?></h1>
+            <div class="login-logo">FacilitaCred</div>
             <p class="login-subtitle">Sistema de Gestão de Empréstimos</p>
         </div>
 

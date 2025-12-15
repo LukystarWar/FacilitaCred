@@ -140,7 +140,7 @@ $overdueCount = count(array_filter($installments, fn($i) => $i['status'] === 'ov
         <table class="table">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th>Parcela</th>
                     <th>Vencimento</th>
                     <th>Valor</th>
                     <th>Status</th>
@@ -151,7 +151,7 @@ $overdueCount = count(array_filter($installments, fn($i) => $i['status'] === 'ov
             <tbody>
                 <?php foreach ($installments as $installment): ?>
                     <tr>
-                        <td><strong><?= $installment['installment_number'] ?></strong></td>
+                        <td><strong><?= $installment['installment_number'] ?>/<?= $loan['total_installments'] ?></strong></td>
                         <td>
                             <?= date('d/m/Y', strtotime($installment['due_date'])) ?>
                             <?php
@@ -323,6 +323,10 @@ $overdueCount = count(array_filter($installments, fn($i) => $i['status'] === 'ov
 
             <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f3f4f6; border-radius: 8px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span>Empréstimo:</span>
+                    <strong id="modal_loan_info"></strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                     <span>Parcela:</span>
                     <strong id="modal_installment_info"></strong>
                 </div>
@@ -399,7 +403,8 @@ function openPaymentModal(installmentId, loanId, amount, installmentNumber, stat
 
     document.getElementById('modal_installment_id').value = installmentId;
     document.getElementById('modal_loan_id').value = loanId;
-    document.getElementById('modal_installment_info').textContent = '#' + installmentNumber;
+    document.getElementById('modal_loan_info').textContent = '#' + loanId;
+    document.getElementById('modal_installment_info').textContent = installmentNumber + ' de <?= $loan["total_installments"] ?>';
     document.getElementById('modal_original_amount').textContent = 'R$ ' + amount.toFixed(2).replace('.', ',');
 
     // Exibir informações de multa se atrasada
