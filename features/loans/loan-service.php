@@ -124,8 +124,8 @@ class LoanService {
      */
     public function getLoansStats($userId, $filters = []) {
         try {
-            $where = ["l.user_id = :user_id"];
-            $params = ['user_id' => $userId];
+            $where = ["1=1"];
+            $params = [];
 
             // Aplicar os mesmos filtros do getAllLoans
             if (!empty($filters['status'])) {
