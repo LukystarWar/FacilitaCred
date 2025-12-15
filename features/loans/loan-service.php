@@ -167,17 +167,14 @@ class LoanService {
             // Query para calcular estatísticas
             $stmt = $this->db->prepare("
                 SELECT
-                    COUNT(*) as total_loans,
-                    COUNT(CASE WHEN l.status = 'active' THEN 1 END) as active_loans,
-                    SUM(CASE WHEN l.status = 'active' THEN l.amount ELSE 0 END) as total_emprestado,
-                    SUM(l.interest_amount) as total_juros,
-                    SUM(CASE
-                        WHEN l.status = 'active'
-                        THEN l.total_amount * ((l.total_installments - l.paid_installments) / l.total_installments)
-                        ELSE 0
-                    END) as total_a_receber
+                    COUNT(DISTINCT l.id) as total_loans,
+                    COUNT(DISTINCT CASE WHEN l.status = 'active' THEN l.id END) as active_loans,
+                    COALESCE(SUM(CASE WHEN l.status = 'active' THEN l.amount ELSE 0 END), 0) as total_emprestado,
+                    COALESCE(SUM(l.interest_amount), 0) as total_juros,
+                    COALESCE(SUM(CASE WHEN i.status IN ('pending', 'overdue') THEN i.amount ELSE 0 END), 0) as total_a_receber
                 FROM loans l
                 INNER JOIN clients c ON l.client_id = c.id
+                LEFT JOIN loan_installments i ON l.id = i.loan_id AND l.status = 'active'
                 WHERE {$whereClause}
             ");
             $stmt->execute($params);
