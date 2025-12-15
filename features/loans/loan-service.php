@@ -169,7 +169,7 @@ class LoanService {
                 SELECT
                     COUNT(*) as total_loans,
                     COUNT(CASE WHEN l.status = 'active' THEN 1 END) as active_loans,
-                    SUM(l.amount) as total_emprestado,
+                    SUM(CASE WHEN l.status = 'active' THEN l.amount ELSE 0 END) as total_emprestado,
                     SUM(l.interest_amount) as total_juros,
                     SUM(CASE
                         WHEN l.status = 'active'
