@@ -10,8 +10,8 @@ class LoanService {
     public function getAllLoans($userId, $filters = [], $page = 1, $perPage = 20) {
         try {
             $offset = ($page - 1) * $perPage;
-            $where = ["w.user_id = :user_id"];
-            $params = ['user_id' => $userId];
+            $where = ["1=1"];
+            $params = [];
 
             // Filtro por status
             if (!empty($filters['status'])) {
@@ -124,7 +124,7 @@ class LoanService {
      */
     public function getLoansStats($userId, $filters = []) {
         try {
-            $where = ["w.user_id = :user_id"];
+            $where = ["l.user_id = :user_id"];
             $params = ['user_id' => $userId];
 
             // Aplicar os mesmos filtros do getAllLoans
@@ -178,7 +178,6 @@ class LoanService {
                     END) as total_a_receber
                 FROM loans l
                 INNER JOIN clients c ON l.client_id = c.id
-                INNER JOIN wallets w ON l.wallet_id = w.id
                 WHERE {$whereClause}
             ");
             $stmt->execute($params);
