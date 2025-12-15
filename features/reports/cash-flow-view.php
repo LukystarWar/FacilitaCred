@@ -12,6 +12,8 @@ $walletService = new WalletService();
 $walletFilter = intval($_GET['wallet_id'] ?? 0);
 $startDate = $_GET['start_date'] ?? date('Y-m-01');
 $endDate = $_GET['end_date'] ?? date('Y-m-d');
+$typeFilter = $_GET['type'] ?? '';
+$searchFilter = $_GET['search'] ?? '';
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $perPage = 20;
 $offset = ($page - 1) * $perPage;
@@ -44,10 +46,29 @@ if ($walletFilter > 0) {
     $params['wallet_id'] = $walletFilter;
 }
 
+if (!empty($typeFilter)) {
+    $sql .= " AND t.type = :type";
+    $params['type'] = $typeFilter;
+}
+
+if (!empty($searchFilter)) {
+    $sql .= " AND (c.name LIKE :search OR t.description LIKE :search)";
+    $params['search'] = '%' . $searchFilter . '%';
+}
+
 // Contar total de registros para paginação
-$countSql = "SELECT COUNT(*) FROM wallet_transactions t WHERE DATE(t.created_at) BETWEEN :start_date AND :end_date";
+$countSql = "SELECT COUNT(*) FROM wallet_transactions t
+    LEFT JOIN loans l ON ((t.type IN ('loan_out', 'loan_payment')) AND (t.description LIKE CONCAT('%#', l.id, '%')))
+    LEFT JOIN clients c ON l.client_id = c.id
+    WHERE DATE(t.created_at) BETWEEN :start_date AND :end_date";
 if ($walletFilter > 0) {
     $countSql .= " AND t.wallet_id = :wallet_id";
+}
+if (!empty($typeFilter)) {
+    $countSql .= " AND t.type = :type";
+}
+if (!empty($searchFilter)) {
+    $countSql .= " AND (c.name LIKE :search OR t.description LIKE :search)";
 }
 $countStmt = $db->prepare($countSql);
 $countStmt->execute($params);
@@ -69,6 +90,31 @@ $totalEntradas = array_sum(array_map(fn($t) => in_array($t['type'], ['deposit', 
 $totalSaidas = array_sum(array_map(fn($t) => in_array($t['type'], ['withdrawal', 'transfer_out', 'loan_out']) ? $t['amount'] : 0, $transactions));
 $saldo = $totalEntradas - $totalSaidas;
 
+// Calcular lucro do período (juros de empréstimos pagos)
+$lucroSql = "
+    SELECT
+        SUM(l.interest_amount) as total_lucro,
+        COUNT(DISTINCT l.id) as total_emprestimos
+    FROM loans l
+    WHERE l.status = 'paid'
+      AND DATE(l.updated_at) BETWEEN :start_date AND :end_date
+";
+$lucroParams = [
+    'start_date' => $startDate,
+    'end_date' => $endDate
+];
+
+if ($walletFilter > 0) {
+    $lucroSql .= " AND l.wallet_id = :wallet_id";
+    $lucroParams['wallet_id'] = $walletFilter;
+}
+
+$lucroStmt = $db->prepare($lucroSql);
+$lucroStmt->execute($lucroParams);
+$lucroData = $lucroStmt->fetch(PDO::FETCH_ASSOC);
+$lucroTotal = $lucroData['total_lucro'] ?? 0;
+$emprestimosQuitados = $lucroData['total_emprestimos'] ?? 0;
+
 $pageTitle = 'Fluxo de Caixa';
 require_once __DIR__ . '/../../shared/layout/header.php';
 ?>
@@ -78,12 +124,15 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 </div>
 
 <div class="card" style="margin-bottom: 2rem;">
-    <form method="GET" action="<?= BASE_URL ?>/reports/cash-flow">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+    <div class="card-header">
+        <h3 style="margin: 0; font-size: 1rem; font-weight: 600;">🔍 Filtros</h3>
+    </div>
+    <form method="GET" action="<?= BASE_URL ?>/reports/cash-flow" style="padding: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
             <div class="form-group" style="margin: 0;">
                 <label for="wallet_id">Carteira</label>
-                <select id="wallet_id" name="wallet_id">
-                    <option value="0">Todas as carteiras</option>
+                <select id="wallet_id" name="wallet_id" class="form-control">
+                    <option value="0">Todas</option>
                     <?php foreach ($wallets as $wallet): ?>
                         <option value="<?= $wallet['id'] ?>" <?= $wallet['id'] == $walletFilter ? 'selected' : '' ?>>
                             <?= htmlspecialchars($wallet['name']) ?>
@@ -93,20 +142,40 @@ require_once __DIR__ . '/../../shared/layout/header.php';
             </div>
 
             <div class="form-group" style="margin: 0;">
+                <label for="type">Tipo</label>
+                <select id="type" name="type" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="deposit" <?= $typeFilter === 'deposit' ? 'selected' : '' ?>>💰 Depósito</option>
+                    <option value="withdrawal" <?= $typeFilter === 'withdrawal' ? 'selected' : '' ?>>💸 Retirada</option>
+                    <option value="transfer_in" <?= $typeFilter === 'transfer_in' ? 'selected' : '' ?>>📥 Transferência Recebida</option>
+                    <option value="transfer_out" <?= $typeFilter === 'transfer_out' ? 'selected' : '' ?>>📤 Transferência Enviada</option>
+                    <option value="loan_out" <?= $typeFilter === 'loan_out' ? 'selected' : '' ?>>📤 Empréstimo</option>
+                    <option value="loan_payment" <?= $typeFilter === 'loan_payment' ? 'selected' : '' ?>>📥 Pagamento</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin: 0;">
+                <label for="search">Buscar</label>
+                <input type="text" id="search" name="search" class="form-control"
+                       placeholder="Cliente ou descrição..." value="<?= htmlspecialchars($searchFilter) ?>">
+            </div>
+
+            <div class="form-group" style="margin: 0;">
                 <label for="start_date">Data Inicial</label>
-                <input type="date" id="start_date" name="start_date" value="<?= $startDate ?>">
+                <input type="date" id="start_date" name="start_date" class="form-control" value="<?= $startDate ?>">
             </div>
 
             <div class="form-group" style="margin: 0;">
                 <label for="end_date">Data Final</label>
-                <input type="date" id="end_date" name="end_date" value="<?= $endDate ?>">
+                <input type="date" id="end_date" name="end_date" class="form-control" value="<?= $endDate ?>">
             </div>
+        </div>
 
-            <div style="display: flex; align-items: flex-end;">
-                <button type="submit" class="btn btn-primary" style="width: 100%;">
-                    🔍 Filtrar
-                </button>
-            </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <?php if ($walletFilter > 0 || !empty($typeFilter) || !empty($searchFilter) || $startDate !== date('Y-m-01') || $endDate !== date('Y-m-d')): ?>
+                <a href="<?= BASE_URL ?>/reports/cash-flow" class="btn btn-secondary">Limpar Filtros</a>
+            <?php endif; ?>
         </div>
     </form>
 </div>
@@ -129,9 +198,14 @@ require_once __DIR__ . '/../../shared/layout/header.php';
         <div class="stat-label" style="color: #6b7280;">Saldo do Período</div>
     </div>
 
-    <div class="stat-card" style="border-left: 4px solid #6b7280;">
-        <div class="stat-value" style="color: #1C1C1C;"><?= count($transactions) ?></div>
-        <div class="stat-label" style="color: #6b7280;">Total de Transações</div>
+    <div class="stat-card" style="border-left: 4px solid #65A30D;">
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($lucroTotal, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">
+            Lucro do Período (Juros)
+            <?php if ($emprestimosQuitados > 0): ?>
+                <br><small style="font-size: 0.75rem; font-weight: normal;"><?= $emprestimosQuitados ?> empréstimo<?= $emprestimosQuitados > 1 ? 's' : '' ?> quitado<?= $emprestimosQuitados > 1 ? 's' : '' ?></small>
+            <?php endif; ?>
+        </div>
     </div>
 </div>
 
@@ -211,11 +285,13 @@ require_once __DIR__ . '/../../shared/layout/header.php';
             </div>
             <div style="display: flex; gap: 0.5rem;">
                 <?php
-                $buildUrl = function($p) use ($walletFilter, $startDate, $endDate) {
+                $buildUrl = function($p) use ($walletFilter, $startDate, $endDate, $typeFilter, $searchFilter) {
                     $params = ['page' => $p];
                     if ($walletFilter > 0) $params['wallet_id'] = $walletFilter;
                     if ($startDate) $params['start_date'] = $startDate;
                     if ($endDate) $params['end_date'] = $endDate;
+                    if (!empty($typeFilter)) $params['type'] = $typeFilter;
+                    if (!empty($searchFilter)) $params['search'] = $searchFilter;
                     return BASE_URL . '/reports/cash-flow?' . http_build_query($params);
                 };
                 ?>
