@@ -38,9 +38,16 @@ require_once SHARED_PATH . '/layout/header.php';
     .login-logo {
         font-size: 2.5rem;
         font-weight: 800;
-        color: #11C76F;
         margin-bottom: var(--spacing-sm);
         letter-spacing: -0.5px;
+    }
+
+    .login-logo .facilita {
+        color: #374151;
+    }
+
+    .login-logo .cred {
+        color: #11C76F;
     }
 
     .login-title {
@@ -83,8 +90,10 @@ require_once SHARED_PATH . '/layout/header.php';
 <div class="login-container">
     <div class="login-card">
         <div class="login-header">
-            <div class="login-logo">FacilitaCred</div>
-            <p class="login-subtitle">Sistema de Gestão de Empréstimos</p>
+            <div class="login-logo">
+                <span class="facilita">Facilita</span><span class="cred">Cred</span>
+            </div>
+            <p class="login-subtitle">Sistema de Gestão Financeira</p>
         </div>
 
         <?php if (Session::hasFlash('error')): ?>
