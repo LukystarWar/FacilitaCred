@@ -151,7 +151,7 @@ $overdueCount = count(array_filter($installments, fn($i) => $i['status'] === 'ov
             <tbody>
                 <?php foreach ($installments as $installment): ?>
                     <tr>
-                        <td><strong><?= $installment['installment_number'] ?>/<?= $loan['total_installments'] ?></strong></td>
+                        <td><strong><?= $installment['installment_number'] ?>/<?= $loan['installments_count'] ?></strong></td>
                         <td>
                             <?= date('d/m/Y', strtotime($installment['due_date'])) ?>
                             <?php
@@ -404,7 +404,7 @@ function openPaymentModal(installmentId, loanId, amount, installmentNumber, stat
     document.getElementById('modal_installment_id').value = installmentId;
     document.getElementById('modal_loan_id').value = loanId;
     document.getElementById('modal_loan_info').textContent = '#' + loanId;
-    document.getElementById('modal_installment_info').textContent = installmentNumber + ' de <?= $loan["total_installments"] ?>';
+    document.getElementById('modal_installment_info').textContent = installmentNumber + ' de <?= $loan["installments_count"] ?>';
     document.getElementById('modal_original_amount').textContent = 'R$ ' + amount.toFixed(2).replace('.', ',');
 
     // Exibir informações de multa se atrasada

@@ -47,9 +47,10 @@ class ClientService {
                 SELECT
                     c.*,
                     COUNT(DISTINCT l.id) as loan_count,
-                    COALESCE(SUM(CASE WHEN l.status = 'active' THEN l.total_amount ELSE 0 END), 0) as active_debt
+                    COALESCE(SUM(CASE WHEN i.status IN ('pending', 'overdue') THEN i.amount ELSE 0 END), 0) as active_debt
                 FROM clients c
-                LEFT JOIN loans l ON c.id = l.client_id
+                LEFT JOIN loans l ON c.id = l.client_id AND l.status = 'active'
+                LEFT JOIN loan_installments i ON l.id = i.loan_id
                 WHERE $whereClause
                 GROUP BY c.id
                 ORDER BY active_debt DESC, c.created_at DESC

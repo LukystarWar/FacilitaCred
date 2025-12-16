@@ -80,14 +80,27 @@ require_once __DIR__ . '/../../shared/layout/header.php';
             </div>
             <div>
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Cliente</label>
-                <select name="client_id" class="form-control">
+                <input type="text" list="client-list" name="client_search" class="form-control"
+                       placeholder="Digite ou selecione..."
+                       value="<?php
+                           if (!empty($filters['client_id'])) {
+                               foreach ($clients as $client) {
+                                   if ($client['id'] == $filters['client_id']) {
+                                       echo htmlspecialchars($client['name']);
+                                       break;
+                                   }
+                               }
+                           }
+                       ?>">
+                <input type="hidden" name="client_id" id="client_id_hidden" value="<?= $filters['client_id'] ?>">
+                <datalist id="client-list">
                     <option value="">Todos</option>
                     <?php foreach ($clients as $client): ?>
-                        <option value="<?= $client['id'] ?>" <?= $filters['client_id'] == $client['id'] ? 'selected' : '' ?>>
+                        <option value="<?= htmlspecialchars($client['name']) ?>" data-id="<?= $client['id'] ?>">
                             <?= htmlspecialchars($client['name']) ?>
                         </option>
                     <?php endforeach; ?>
-                </select>
+                </datalist>
             </div>
             <div>
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">Carteira</label>
@@ -271,6 +284,45 @@ require_once __DIR__ . '/../../shared/layout/header.php';
 <?php endif; ?>
 
 <script>
+// Sincronizar input de cliente com hidden field
+document.addEventListener('DOMContentLoaded', function() {
+    const clientSearch = document.querySelector('input[name="client_search"]');
+    const clientIdHidden = document.getElementById('client_id_hidden');
+    const clientDatalist = document.getElementById('client-list');
+
+    if (clientSearch) {
+        clientSearch.addEventListener('input', function() {
+            const value = this.value.trim();
+
+            // Se vazio, limpar
+            if (!value) {
+                clientIdHidden.value = '';
+                return;
+            }
+
+            // Buscar o ID correspondente no datalist
+            const options = clientDatalist.querySelectorAll('option');
+            let found = false;
+
+            for (let option of options) {
+                if (option.value === value) {
+                    const clientId = option.getAttribute('data-id');
+                    if (clientId) {
+                        clientIdHidden.value = clientId;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            // Se não encontrou correspondência exata, limpar ID
+            if (!found) {
+                clientIdHidden.value = '';
+            }
+        });
+    }
+});
+
 function cobrarTodosAtrasados() {
     // Coletar todos os links de WhatsApp da página atual
     const whatsappLinks = document.querySelectorAll('a[href*="/loans/whatsapp"]');

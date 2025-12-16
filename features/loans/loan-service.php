@@ -167,18 +167,30 @@ class LoanService {
             // Query para calcular estatísticas
             $stmt = $this->db->prepare("
                 SELECT
-                    COUNT(DISTINCT l.id) as total_loans,
-                    COUNT(DISTINCT CASE WHEN l.status = 'active' THEN l.id END) as active_loans,
+                    COUNT(l.id) as total_loans,
+                    COUNT(CASE WHEN l.status = 'active' THEN 1 END) as active_loans,
                     COALESCE(SUM(CASE WHEN l.status = 'active' THEN l.amount ELSE 0 END), 0) as total_emprestado,
-                    COALESCE(SUM(l.interest_amount), 0) as total_juros,
-                    COALESCE(SUM(CASE WHEN i.status IN ('pending', 'overdue') THEN i.amount ELSE 0 END), 0) as total_a_receber
+                    COALESCE(SUM(l.interest_amount), 0) as total_juros
                 FROM loans l
                 INNER JOIN clients c ON l.client_id = c.id
-                LEFT JOIN loan_installments i ON l.id = i.loan_id AND l.status = 'active'
                 WHERE {$whereClause}
             ");
             $stmt->execute($params);
             $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Query separada para calcular total a receber (parcelas pendentes/atrasadas)
+            $receberStmt = $this->db->prepare("
+                SELECT COALESCE(SUM(i.amount), 0) as total_a_receber
+                FROM loan_installments i
+                INNER JOIN loans l ON i.loan_id = l.id
+                INNER JOIN clients c ON l.client_id = c.id
+                WHERE l.status = 'active' AND i.status IN ('pending', 'overdue')
+                  AND {$whereClause}
+            ");
+            $receberStmt->execute($params);
+            $receber = $receberStmt->fetch(PDO::FETCH_ASSOC);
+
+            $stats['total_a_receber'] = $receber['total_a_receber'];
 
             return [
                 'total_loans' => (int)$stats['total_loans'],
