@@ -26,6 +26,20 @@ if (!$client) {
 
 $loans = $clientService->getClientLoans($clientId, $userId);
 
+// Calcular dívida ativa total (apenas parcelas pendentes/atrasadas)
+$db = Database::getInstance()->getConnection();
+$stmtDebt = $db->prepare("
+    SELECT COALESCE(SUM(i.amount), 0) as active_debt
+    FROM loan_installments i
+    INNER JOIN loans l ON i.loan_id = l.id
+    WHERE l.client_id = :client_id
+      AND l.status = 'active'
+      AND i.status IN ('pending', 'overdue')
+");
+$stmtDebt->execute(['client_id' => $clientId]);
+$debtResult = $stmtDebt->fetch(PDO::FETCH_ASSOC);
+$activeTotalDebt = $debtResult['active_debt'];
+
 $pageTitle = 'Detalhes do Cliente';
 require_once __DIR__ . '/../../shared/layout/header.php';
 ?>
@@ -58,8 +72,9 @@ require_once __DIR__ . '/../../shared/layout/header.php';
         <div class="stat-label" style="color: #6b7280;">Empréstimos Ativos</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #EA580C;">
-        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format(array_sum(array_map(fn($l) => $l['status'] === 'active' ? $l['total_amount'] : 0, $loans)), 2, ',', '.') ?></div>
-        <div class="stat-label" style="color: #6b7280;">Dívida Ativa</div>
+        <div class="stat-value" style="color: #1C1C1C;">R$ <?= number_format($activeTotalDebt, 2, ',', '.') ?></div>
+        <div class="stat-label" style="color: #6b7280;">Dívida Ativa Total</div>
+        <small style="color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Apenas parcelas pendentes</small>
     </div>
 </div>
 
